@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- =================================================================
+    GRADE VIEWS
+    ================================================================== -->
+    
+    <!-- Grade List View -->
+    <record id="view_school_grade_list" model="ir.ui.view">
+        <field name="name">school.grade.list</field>
+        <field name="model">school.grade</field>
+        <field name="arch" type="xml">
+            <list string="Grades" multi_edit="1" sample="1"
+                  decoration-success="letter_grade in ('A', 'B')"
+                  decoration-warning="letter_grade == 'C'"
+                  decoration-danger="letter_grade in ('D', 'F')">
+                <field name="date"/>
+                <!-- TODO: Add student_id, course_id, grade_type -->
+                <!-- TODO: Add score, max_score, percentage, letter_grade -->
+                <!-- TODO: Add is_passing with widget -->
+            </list>
+        </field>
+    </record>
+    
+    <!-- Grade Form View -->
+    <record id="view_school_grade_form" model="ir.ui.view">
+        <field name="name">school.grade.form</field>
+        <field name="model">school.grade</field>
+        <field name="arch" type="xml">
+            <form string="Grade">
+                <sheet>
+                    <group>
+                        <group string="Grade Details">
+                            <field name="date"/>
+                            <!-- TODO: Add student_id, course_id -->
+                            <!-- TODO: Add grade_type, description -->
+                        </group>
+                        <group string="Score">
+                            <!-- TODO: Add score, max_score -->
+                            <!-- TODO: Add percentage, letter_grade (readonly) -->
+                            <!-- TODO: Add weight, weighted_score (readonly) -->
+                        </group>
+                    </group>
+                    <group string="Feedback">
+                        <!-- TODO: Add feedback Text field -->
+                    </group>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+    
+    <!-- Grade Search View -->
+    <record id="view_school_grade_search" model="ir.ui.view">
+        <field name="name">school.grade.search</field>
+        <field name="model">school.grade</field>
+        <field name="arch" type="xml">
+            <search string="Search Grades">
+                <field name="date"/>
+                <!-- TODO: Add search fields for student_id, course_id -->
+                
+                <!-- TODO: Add filters for passing/failing, grade type -->
+                
+                <!-- TODO: Add group by options -->
+            </search>
+        </field>
+    </record>
+    
+    <!-- Grade Pivot View (for Analysis) -->
+    <record id="view_school_grade_pivot" model="ir.ui.view">
+        <field name="name">school.grade.pivot</field>
+        <field name="model">school.grade</field>
+        <field name="arch" type="xml">
+            <pivot string="Grade Analysis" sample="1">
+                <!-- TODO: Configure pivot view -->
+                <!-- Row: student_id, Column: course_id, Measure: score (avg) -->
+            </pivot>
+        </field>
+    </record>
+    
+    <!-- Grade Graph View -->
+    <record id="view_school_grade_graph" model="ir.ui.view">
+        <field name="name">school.grade.graph</field>
+        <field name="model">school.grade</field>
+        <field name="arch" type="xml">
+            <graph string="Grade Distribution" type="bar" sample="1">
+                <!-- TODO: Configure graph view -->
+            </graph>
+        </field>
+    </record>
+    
+    <!-- Grade Action -->
+    <record id="action_school_grade" model="ir.actions.act_window">
+        <field name="name">Grades</field>
+        <field name="res_model">school.grade</field>
+        <field name="view_mode">list,form,pivot,graph</field>
+        <field name="search_view_id" ref="view_school_grade_search"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Record your first grade!
+            </p>
+        </field>
+    </record>
+</odoo>

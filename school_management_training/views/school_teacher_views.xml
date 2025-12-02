@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- =================================================================
+    TEACHER VIEWS
+    ================================================================== -->
+    <!--
+    TODO: Complete the Teacher Views
+    
+    Similar structure to Student views but with teacher-specific fields.
+    -->
+    
+    <!-- Teacher List View -->
+    <record id="view_school_teacher_list" model="ir.ui.view">
+        <field name="name">school.teacher.list</field>
+        <field name="model">school.teacher</field>
+        <field name="arch" type="xml">
+            <list string="Teachers" multi_edit="1" sample="1">
+                <field name="employee_code" readonly="1"/>
+                <!-- TODO: Add fields: name, email, phone, department, hire_date -->
+                <!-- TODO: Add total_courses, total_students as optional fields -->
+                <field name="active" column_invisible="1"/>
+            </list>
+        </field>
+    </record>
+    
+    <!-- Teacher Form View -->
+    <record id="view_school_teacher_form" model="ir.ui.view">
+        <field name="name">school.teacher.form</field>
+        <field name="model">school.teacher</field>
+        <field name="arch" type="xml">
+            <form string="Teacher">
+                <sheet>
+                    <widget name="web_ribbon" title="Archived" bg_color="text-bg-danger"
+                            invisible="active"/>
+                    
+                    <div class="oe_button_box" name="button_box">
+                        <!-- TODO: Add stat button for courses -->
+                    </div>
+                    
+                    <!-- TODO: Add photo and title section similar to student -->
+                    
+                    <group>
+                        <group string="Personal Information">
+                            <field name="employee_code"/>
+                            <!-- TODO: Add name, email, phone, date_of_birth -->
+                        </group>
+                        <group string="Employment Information">
+                            <!-- TODO: Add hire_date, department, qualification -->
+                            <!-- TODO: Add salary with currency_id -->
+                        </group>
+                    </group>
+                    
+                    <notebook>
+                        <page string="Courses" name="courses">
+                            <!-- TODO: Add course_ids One2many -->
+                        </page>
+                        <page string="Biography" name="biography">
+                            <!-- TODO: Add biography Html field -->
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+    
+    <!-- Teacher Search View -->
+    <record id="view_school_teacher_search" model="ir.ui.view">
+        <field name="name">school.teacher.search</field>
+        <field name="model">school.teacher</field>
+        <field name="arch" type="xml">
+            <search string="Search Teachers">
+                <field name="employee_code"/>
+                <!-- TODO: Add more search fields -->
+                
+                <separator/>
+                
+                <filter name="filter_inactive" string="Archived" 
+                        domain="[('active', '=', False)]"/>
+                
+                <!-- TODO: Add group by options -->
+            </search>
+        </field>
+    </record>
+    
+    <!-- Teacher Action -->
+    <record id="action_school_teacher" model="ir.actions.act_window">
+        <field name="name">Teachers</field>
+        <field name="res_model">school.teacher</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_school_teacher_search"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create your first teacher!
+            </p>
+        </field>
+    </record>
+</odoo>

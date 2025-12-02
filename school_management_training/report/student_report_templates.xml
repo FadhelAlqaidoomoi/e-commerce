@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- =================================================================
+    STUDENT REPORT TEMPLATES
+    ================================================================== -->
+    <!--
+    Report templates define how printed/PDF reports look.
+    
+    Concepts covered:
+    - QWeb templating
+    - Report header/footer
+    - Tables and loops
+    - Conditional content
+    - Styling with Bootstrap
+    -->
+    
+    <!-- Student Report Card Template -->
+    <template id="report_student_card">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="student">
+                <t t-call="web.external_layout">
+                    <div class="page">
+                        <h2 class="text-center">Student Report Card</h2>
+                        
+                        <div class="row mt-4">
+                            <div class="col-6">
+                                <strong>Student:</strong>
+                                <span t-field="student.display_name"/>
+                            </div>
+                            <div class="col-6">
+                                <strong>Student Code:</strong>
+                                <span t-field="student.student_code"/>
+                            </div>
+                        </div>
+                        
+                        <!-- TODO: Add more student information -->
+                        <!-- Date of birth, Guardian, etc. -->
+                        
+                        <h4 class="mt-4">Enrolled Courses</h4>
+                        <!-- TODO: Add table of enrollments -->
+                        <!--
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Course</th>
+                                    <th>Teacher</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <t t-foreach="student.enrollment_ids" t-as="enrollment">
+                                    <tr>
+                                        <td t-field="enrollment.course_id"/>
+                                        <td t-field="enrollment.teacher_id"/>
+                                        <td t-field="enrollment.state"/>
+                                    </tr>
+                                </t>
+                            </tbody>
+                        </table>
+                        -->
+                        
+                        <h4 class="mt-4">Grades</h4>
+                        <!-- TODO: Add table of grades -->
+                        
+                        <h4 class="mt-4">Summary</h4>
+                        <div class="row">
+                            <div class="col-4">
+                                <strong>Average Grade:</strong>
+                                <!-- TODO: Add average_grade field -->
+                            </div>
+                            <div class="col-4">
+                                <strong>Attendance Rate:</strong>
+                                <!-- TODO: Add attendance_rate field -->
+                            </div>
+                            <div class="col-4">
+                                <strong>Total Courses:</strong>
+                                <!-- TODO: Add total_courses field -->
+                            </div>
+                        </div>
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+    
+    
+    <!-- Student List Report Template -->
+    <template id="report_student_list">
+        <t t-call="web.html_container">
+            <t t-call="web.external_layout">
+                <div class="page">
+                    <h2 class="text-center">Student List</h2>
+                    <p class="text-center text-muted">
+                        Generated on <span t-esc="context_timestamp(datetime.datetime.now()).strftime('%Y-%m-%d %H:%M')"/>
+                    </p>
+                    
+                    <table class="table table-sm table-striped">
+                        <thead>
+                            <tr>
+                                <th>Code</th>
+                                <th>Name</th>
+                                <!-- TODO: Add more columns -->
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <t t-foreach="docs" t-as="student">
+                                <tr>
+                                    <td t-field="student.student_code"/>
+                                    <td t-field="student.display_name"/>
+                                    <!-- TODO: Add more fields -->
+                                </tr>
+                            </t>
+                        </tbody>
+                    </table>
+                    
+                    <div class="mt-4">
+                        <strong>Total Students:</strong>
+                        <span t-esc="len(docs)"/>
+                    </div>
+                </div>
+            </t>
+        </t>
+    </template>
+    
+    
+    <!-- Course Report Template -->
+    <template id="report_course_detail">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="course">
+                <t t-call="web.external_layout">
+                    <div class="page">
+                        <h2 class="text-center" t-field="course.name"/>
+                        <p class="text-center">
+                            <span t-field="course.code"/>
+                        </p>
+                        
+                        <!-- TODO: Complete the course report template -->
+                        <!-- Show course details, enrolled students, grade statistics -->
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+</odoo>

@@ -44,7 +44,11 @@ class EnrollmentWizard(models.TransientModel):
         string='Course',
         required=True,
     )
-    # TODO: Add remaining fields
+    student_ids = fields.Many2many('school.student', string='Students')
+    enrollment_date = fields.Date(string='Enrollment Date', default=fields.Date.today)
+    send_notification = fields.Boolean(string='Send Notification', default=True)
+    skip_prerequisites = fields.Boolean(string='Skip Prerequisites Check', default=False)
+    notes = fields.Text(string='Notes')
     
     
     # ==========================================================================
@@ -63,8 +67,13 @@ class EnrollmentWizard(models.TransientModel):
         """
         res = super().default_get(fields_list)
         
-        # YOUR CODE HERE
-        # Check context for 'active_model' and 'active_ids'
+        active_model = self.env.context.get('active_model')
+        active_ids = self.env.context.get('active_ids', [])
+        
+        if active_model == 'school.course' and active_ids:
+            res['course_id'] = active_ids[0]
+        elif active_model == 'school.student' and active_ids:
+            res['student_ids'] = [(6, 0, active_ids)]
         
         return res
     
@@ -118,7 +127,32 @@ class EnrollmentWizard(models.TransientModel):
         """
         self.ensure_one()
         
-        # YOUR CODE HERE
+        if not self.student_ids:
+            raise UserError('Please select at least one student!')
+        
+        if self.course_id.is_full and len(self.student_ids) > self.course_id.available_seats:
+            raise UserError('Course does not have enough available seats!')
+        
+        created_enrollments = self.env['school.enrollment']
+        
+        for student in self.student_ids:
+            # Check prerequisites
+            if not self.skip_prerequisites and not self.course_id.check_prerequisites(student):
+                raise UserError(f'Student {student.name} does not meet course prerequisites!')
+            
+            # Create enrollment
+            enrollment = self.env['school.enrollment'].create({
+                'student_id': student.id,
+                'course_id': self.course_id.id,
+                'enrollment_date': self.enrollment_date,
+                'notes': self.notes,
+                'state': 'draft',
+            })
+            created_enrollments += enrollment
+        
+        if self.send_notification:
+            for enrollment in created_enrollments:
+                enrollment.message_post(body='Bulk enrollment created')
         
         # Return action to show created enrollments
         return {
@@ -126,7 +160,7 @@ class EnrollmentWizard(models.TransientModel):
             'name': _('Created Enrollments'),
             'res_model': 'school.enrollment',
             'view_mode': 'list,form',
-            'domain': [],  # Set domain to show created enrollments
+            'domain': [('id', 'in', created_enrollments.ids)],
             'target': 'current',
         }
     
@@ -158,8 +192,7 @@ class EnrollmentWizard(models.TransientModel):
     def _check_prerequisites(self, student):
         """TODO: Check if a student meets course prerequisites"""
         self.ensure_one()
-        # YOUR CODE HERE
-        return True
+        return self.course_id.check_prerequisites(student)
     
     # TODO: Implement remaining helper methods
 
@@ -194,7 +227,18 @@ class BulkGradeWizard(models.TransientModel):
         string='Course',
         required=True,
     )
-    # TODO: Add remaining fields
+    grade_date = fields.Date(string='Grade Date', required=True, default=fields.Date.today)
+    grade_type = fields.Selection([
+        ('exam', 'Exam'),
+        ('quiz', 'Quiz'),
+        ('assignment', 'Assignment'),
+        ('project', 'Project'),
+        ('participation', 'Participation'),
+        ('final', 'Final'),
+    ], string='Grade Type')
+    max_score = fields.Float(string='Max Score', default=100)
+    description = fields.Char(string='Description')
+    line_ids = fields.One2many('school.bulk.grade.wizard.line', 'wizard_id', string='Grade Lines')
     
     
     # ==========================================================================
@@ -207,14 +251,36 @@ class BulkGradeWizard(models.TransientModel):
     def action_load_students(self):
         """TODO: Load enrolled students for grade entry"""
         self.ensure_one()
-        # YOUR CODE HERE
-        pass
+        enrollments = self.env['school.enrollment'].search([
+            ('course_id', '=', self.course_id.id),
+            ('state', '=', 'confirmed'),
+        ])
+        
+        lines = []
+        for enrollment in enrollments:
+            lines.append((0, 0, {
+                'student_id': enrollment.student_id.id,
+            }))
+        
+        self.line_ids = lines
     
     def action_save_grades(self):
         """TODO: Save all entered grades"""
         self.ensure_one()
-        # YOUR CODE HERE
-        pass
+        for line in self.line_ids:
+            if line.score is not None:
+                self.env['school.grade'].create({
+                    'student_id': line.student_id.id,
+                    'course_id': self.course_id.id,
+                    'score': line.score,
+                    'max_score': self.max_score,
+                    'grade_type': self.grade_type,
+                    'description': self.description,
+                    'feedback': line.feedback,
+                    'date': self.grade_date,
+                })
+        
+        return {'type': 'ir.actions.act_window_close'}
 
 
 class BulkGradeWizardLine(models.TransientModel):
@@ -237,7 +303,9 @@ class BulkGradeWizardLine(models.TransientModel):
         required=True,
         ondelete='cascade',
     )
-    # TODO: Add remaining fields
+    student_id = fields.Many2one('school.student', string='Student', required=True)
+    score = fields.Float(string='Score')
+    feedback = fields.Text(string='Feedback')
 
 
 class BulkAttendanceWizard(models.TransientModel):

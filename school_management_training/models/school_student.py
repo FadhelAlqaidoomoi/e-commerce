@@ -11,6 +11,7 @@ from dateutil.relativedelta import relativedelta
 
 from odoo import api, fields, models, _
 from odoo.exceptions import ValidationError, UserError
+from odoo.osv import expression
 
 
 class SchoolStudent(models.Model):
@@ -62,7 +63,20 @@ class SchoolStudent(models.Model):
         copy=False,
         default=lambda self: _('New'),
     )
-    # TODO: Add remaining basic fields below
+    name = fields.Char(string='First Name', required=True, tracking=True)
+    last_name = fields.Char(string='Last Name', required=True)
+    email = fields.Char(string='Email')
+    phone = fields.Char(string='Phone')
+    date_of_birth = fields.Date(string='Date of Birth', required=True)
+    gender = fields.Selection([
+        ('male', 'Male'),
+        ('female', 'Female'),
+        ('other', 'Other'),
+    ], string='Gender')
+    address = fields.Text(string='Address')
+    photo = fields.Binary(string='Photo')
+    active = fields.Boolean(string='Active', default=True)
+    notes = fields.Html(string='Notes')
     
     
     # ==========================================================================
@@ -78,8 +92,12 @@ class SchoolStudent(models.Model):
     # ==========================================================================
     
     # YOUR CODE HERE - Relational Fields
-    
-    
+    guardian_id = fields.Many2one('res.partner', string='Guardian')
+    enrollment_ids = fields.One2many('school.enrollment', 'student_id', string='Enrollments')
+    course_ids = fields.Many2many('school.course', string='Courses')
+    grade_ids = fields.One2many('school.grade', 'student_id', string='Grades')
+    attendance_ids = fields.One2many('school.attendance', 'student_id', string='Attendance')
+    class_id = fields.Many2one('school.course', string='Primary Class')
     # ==========================================================================
     # TODO 3: Define Selection Field for State
     # ==========================================================================
@@ -93,7 +111,13 @@ class SchoolStudent(models.Model):
     # ==========================================================================
     
     # YOUR CODE HERE - State Field
-    
+    state = fields.Selection([
+        ('draft', 'Draft'),
+        ('enrolled', 'Enrolled'),
+        ('graduated', 'Graduated'),
+        ('suspended', 'Suspended'),
+        ('withdrawn', 'Withdrawn'),
+    ], string='State', default='draft', tracking=True)
     
     # ==========================================================================
     # TODO 4: Define Computed Fields
@@ -129,6 +153,10 @@ class SchoolStudent(models.Model):
     )
     
     # TODO: Add age, total_courses, average_grade, attendance_rate fields
+    age = fields.Integer(string='Age', compute='_compute_age', store=True)
+    total_courses = fields.Integer(string='Total Courses', compute='_compute_total_courses', store=True)
+    average_grade = fields.Float(string='Average Grade', compute='_compute_average_grade', digits=(5, 2), store=True)
+    attendance_rate = fields.Float(string='Attendance Rate (%)', compute='_compute_attendance_rate', digits=(5, 2), store=True)
     # TODO: Implement all compute methods below
     
     @api.depends('name', 'last_name')
@@ -139,16 +167,61 @@ class SchoolStudent(models.Model):
         Handle cases where last_name or name might be empty
         """
         for record in self:
-            # YOUR CODE HERE
-            pass
+            if record.last_name and record.name:
+                record.display_name = f"{record.last_name}, {record.name}"
+            elif record.last_name:
+                record.display_name = record.last_name
+            elif record.name:
+                record.display_name = record.name
+            else:
+                record.display_name = ''
+    
+    @api.depends('date_of_birth')
+    def _compute_age(self):
+        """Compute age from date_of_birth"""
+        for record in self:
+            if record.date_of_birth:
+                today = date.today()
+                record.age = today.year - record.date_of_birth.year - (
+                    (today.month, today.day) < (record.date_of_birth.month, record.date_of_birth.day)
+                )
+            else:
+                record.age = 0
+    
+    @api.depends('enrollment_ids')
+    def _compute_total_courses(self):
+        """Compute total number of enrolled courses"""
+        for record in self:
+            record.total_courses = len(record.enrollment_ids)
+    
+    @api.depends('grade_ids.score', 'grade_ids.max_score')
+    def _compute_average_grade(self):
+        """Compute average grade from all grades"""
+        for record in self:
+            if record.grade_ids:
+                percentages = [
+                    (grade.score / grade.max_score * 100) if grade.max_score > 0 else 0
+                    for grade in record.grade_ids
+                ]
+                record.average_grade = sum(percentages) / len(percentages) if percentages else 0.0
+            else:
+                record.average_grade = 0.0
+    
+    @api.depends('attendance_ids.status')
+    def _compute_attendance_rate(self):
+        """Compute attendance rate as percentage of present days"""
+        for record in self:
+            if record.attendance_ids:
+                present_count = len([a for a in record.attendance_ids if a.status == 'present'])
+                record.attendance_rate = (present_count / len(record.attendance_ids)) * 100
+            else:
+                record.attendance_rate = 0.0
     
     # TODO: Implement _compute_age method
     
     # TODO: Implement _compute_total_courses method
     
     # TODO: Implement _compute_average_grade method
-    
-    # TODO: Implement _compute_attendance_rate method
     
     
     # ==========================================================================
@@ -162,8 +235,9 @@ class SchoolStudent(models.Model):
     
     # YOUR CODE HERE - SQL Constraints
     _sql_constraints = [
-        # ('unique_student_code', 'UNIQUE(student_code)', 'Student code must be unique!'),
-        # TODO: Add more constraints
+        ('unique_student_code', 'UNIQUE(student_code)', 'Student code must be unique!'),
+        ('unique_email', 'UNIQUE(email)', 'Email must be unique!'),
+        ('check_date_of_birth', 'CHECK(date_of_birth <= CURRENT_DATE)', 'Date of birth must be in the past!'),
     ]
     
     
@@ -188,10 +262,22 @@ class SchoolStudent(models.Model):
         - Raise ValidationError with appropriate message if invalid
         """
         for record in self:
-            # YOUR CODE HERE
-            pass
+            if record.date_of_birth:
+                today = date.today()
+                age = today.year - record.date_of_birth.year - (
+                    (today.month, today.day) < (record.date_of_birth.month, record.date_of_birth.day)
+                )
+                if age < 5:
+                    raise ValidationError('Student must be at least 5 years old!')
+                if age > 100:
+                    raise ValidationError('Student age cannot exceed 100 years!')
     
-    # TODO: Implement _check_email_format method
+    @api.constrains('email')
+    def _check_email_format(self):
+        """Validate email format"""
+        for record in self:
+            if record.email and '@' not in record.email:
+                raise ValidationError('Invalid email format! Email must contain @ symbol.')
     
     
     # ==========================================================================
@@ -206,8 +292,6 @@ class SchoolStudent(models.Model):
     # ==========================================================================
     
     # YOUR CODE HERE - Onchange Methods
-    
-    
     # ==========================================================================
     # TODO 8: Override CRUD Methods
     # ==========================================================================
@@ -243,15 +327,38 @@ class SchoolStudent(models.Model):
         
         records = super().create(vals_list)
         
-        # TODO: Post message to chatter for each record
+        for record in records:
+            record.message_post(body=_('Student record created'))
         
         return records
     
-    # TODO: Implement write override
+    def write(self, vals):
+        """Override write to track state changes"""
+        result = super().write(vals)
+        
+        if 'state' in vals:
+            for record in self:
+                state_label = dict(record._fields['state'].selection).get(vals['state'], vals['state'])
+                record.message_post(body=_('State changed to: %s') % state_label)
+        
+        return result
     
-    # TODO: Implement unlink override
+    def unlink(self):
+        """Prevent deletion if student has enrollments"""
+        for record in self:
+            if record.enrollment_ids:
+                raise UserError('Cannot delete student with enrollments!')
+        return super().unlink()
     
-    # TODO: Implement copy override
+    def copy(self, default=None):
+        """Override copy to reset specific fields"""
+        default = default or {}
+        default.update({
+            'student_code': _('New'),
+            'name': (self.name or '') + ' (Copy)',
+            'state': 'draft',
+        })
+        return super().copy(default)
     
     
     # ==========================================================================
@@ -285,10 +392,56 @@ class SchoolStudent(models.Model):
         - Post message about enrollment
         """
         for record in self:
-            # YOUR CODE HERE
-            pass
+            if not record.enrollment_ids:
+                raise UserError('Student must have at least one enrollment before enrolling!')
+            record.state = 'enrolled'
+            record.message_post(body=_('Student enrolled'))
     
-    # TODO: Implement remaining action methods
+    def action_graduate(self):
+        """Transition to graduated state"""
+        for record in self:
+            if record.average_grade < 60:
+                raise UserError('Student average grade must be at least 60% to graduate!')
+            record.state = 'graduated'
+            record.message_post(body=_('Student graduated'))
+    
+    def action_suspend(self):
+        """Suspend student"""
+        for record in self:
+            record.state = 'suspended'
+            record.message_post(body=_('Student suspended'))
+    
+    def action_withdraw(self):
+        """Withdraw student"""
+        for record in self:
+            record.state = 'withdrawn'
+            record.message_post(body=_('Student withdrawn'))
+    
+    def action_reactivate(self):
+        """Reactivate suspended/withdrawn student"""
+        for record in self:
+            if record.state not in ('suspended', 'withdrawn'):
+                raise UserError('Only suspended or withdrawn students can be reactivated!')
+            record.state = 'enrolled'
+            record.message_post(body=_('Student reactivated'))
+    
+    def action_reset_to_draft(self):
+        """Reset state to draft (manager only)"""
+        for record in self:
+            record.state = 'draft'
+            record.message_post(body=_('Student reset to draft'))
+    
+    def action_view_enrollments(self):
+        """Open the enrollments view for this student"""
+        self.ensure_one()
+        return {
+            'name': _('Enrollments'),
+            'type': 'ir.actions.act_window',
+            'res_model': 'school.enrollment',
+            'view_mode': 'list,form',
+            'domain': [('student_id', '=', self.id)],
+            'context': {'default_student_id': self.id},
+        }
     
     
     # ==========================================================================
@@ -316,13 +469,50 @@ class SchoolStudent(models.Model):
         Return dict with: total, average, highest, lowest grades
         """
         self.ensure_one()
-        # YOUR CODE HERE
+        if not self.grade_ids:
+            return {'total': 0, 'average': 0.0, 'highest': 0.0, 'lowest': 0.0}
+        
+        percentages = [
+            (grade.score / grade.max_score * 100) if grade.max_score > 0 else 0
+            for grade in self.grade_ids
+        ]
+        
         return {
-            'total': 0,
-            'average': 0.0,
-            'highest': 0.0,
-            'lowest': 0.0,
+            'total': len(self.grade_ids),
+            'average': sum(percentages) / len(percentages) if percentages else 0.0,
+            'highest': max(percentages) if percentages else 0.0,
+            'lowest': min(percentages) if percentages else 0.0,
         }
+    
+    def get_attendance_summary(self):
+        """Calculate and return attendance statistics"""
+        self.ensure_one()
+        if not self.attendance_ids:
+            return {'total': 0, 'present': 0, 'absent': 0, 'late': 0, 'rate': 0.0}
+        
+        total = len(self.attendance_ids)
+        present = len([a for a in self.attendance_ids if a.status == 'present'])
+        absent = len([a for a in self.attendance_ids if a.status == 'absent'])
+        late = len([a for a in self.attendance_ids if a.status == 'late'])
+        
+        return {
+            'total': total,
+            'present': present,
+            'absent': absent,
+            'late': late,
+            'rate': (present / total * 100) if total > 0 else 0.0,
+        }
+    
+    def check_eligibility_for_graduation(self):
+        """Check if student is eligible for graduation"""
+        self.ensure_one()
+        # Check average grade >= 60
+        if self.average_grade < 60:
+            return False
+        # Check attendance rate >= 75
+        if self.attendance_rate < 75:
+            return False
+        return True
     
     # TODO: Implement remaining business methods
     
@@ -348,9 +538,10 @@ class SchoolStudent(models.Model):
         """
         domain = domain or []
         if name:
-            domain = ['|', '|', '|',
+            name_domain = ['|', '|', '|',
                       ('student_code', operator, name),
                       ('name', operator, name),
                       ('last_name', operator, name),
-                      ('email', operator, name)] + domain
-        return self._search(domain, limit=limit, order=order)
+                      ('email', operator, name)]
+            return self._search(expression.AND([name_domain, domain]), limit=limit, order=order)
+        return super()._name_search(name=name, domain=domain, operator=operator, limit=limit, order=order)

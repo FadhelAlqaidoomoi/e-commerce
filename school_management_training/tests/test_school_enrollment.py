@@ -268,7 +268,7 @@ class TestSchoolEnrollment(TransactionCase):
             'state': 'confirmed',
         })
         
-        with self.assertRaises((ValidationError, UserError)):
+        with self.assertRaises(UserError):
             enrollment.unlink()
     
     # =========================================================================

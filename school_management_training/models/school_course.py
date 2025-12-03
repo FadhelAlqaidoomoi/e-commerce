@@ -51,7 +51,21 @@ class SchoolCourse(models.Model):
         size=10,
         tracking=True,
     )
-    # TODO: Add remaining basic fields
+    name = fields.Char(string='Course Name', required=True, tracking=True, translate=True)
+    description = fields.Html(string='Description', translate=True)
+    credits = fields.Integer(string='Credits', required=True, default=3)
+    max_students = fields.Integer(string='Max Students', default=30)
+    min_students = fields.Integer(string='Min Students', default=5)
+    hours_per_week = fields.Float(string='Hours Per Week', digits=(4, 1))
+    is_mandatory = fields.Boolean(string='Is Mandatory')
+    level = fields.Selection([
+        ('beginner', 'Beginner'),
+        ('intermediate', 'Intermediate'),
+        ('advanced', 'Advanced'),
+    ], string='Level')
+    start_date = fields.Date(string='Start Date')
+    end_date = fields.Date(string='End Date')
+    active = fields.Boolean(string='Active', default=True)
     
     
     # ==========================================================================
@@ -68,8 +82,14 @@ class SchoolCourse(models.Model):
     # ==========================================================================
     
     # YOUR CODE HERE - Relational Fields
-    
-    
+    teacher_id = fields.Many2one('school.teacher', string='Teacher', tracking=True)
+    enrollment_ids = fields.One2many('school.enrollment', 'course_id', string='Enrollments')
+    student_ids = fields.Many2many('school.student', string='Students')
+    grade_ids = fields.One2many('school.grade', 'course_id', string='Grades')
+    prerequisite_ids = fields.Many2many('school.course', 'school_course_prerequisites_rel', 
+        'course_id', 'prerequisite_id', string='Prerequisites')
+    category_id = fields.Many2one('school.course.category', string='Category')
+    tag_ids = fields.Many2many('school.course.tag', string='Tags')
     # ==========================================================================
     # TODO 3: Define State Field with Workflow
     # ==========================================================================
@@ -82,8 +102,13 @@ class SchoolCourse(models.Model):
     # ==========================================================================
     
     # YOUR CODE HERE - State Field
-    
-    
+    state = fields.Selection([
+        ('draft', 'Draft'),
+        ('planned', 'Planned'),
+        ('in_progress', 'In Progress'),
+        ('completed', 'Completed'),
+        ('cancelled', 'Cancelled'),
+    ], string='State', default='draft', tracking=True)
     # ==========================================================================
     # TODO 4: Define Computed Fields
     # ==========================================================================
@@ -100,18 +125,82 @@ class SchoolCourse(models.Model):
         compute='_compute_enrollment_stats',
         store=True,
     )
+    available_seats = fields.Integer(
+        string='Available Seats',
+        compute='_compute_enrollment_stats',
+        store=True,
+    )
+    is_full = fields.Boolean(
+        string='Is Full',
+        compute='_compute_enrollment_stats',
+        store=True,
+    )
+    progress_percentage = fields.Float(
+        string='Progress %',
+        compute='_compute_progress_percentage',
+        digits=(5, 2),
+        store=True,
+    )
+    average_grade = fields.Float(
+        string='Average Grade',
+        compute='_compute_average_grade',
+        digits=(5, 2),
+        store=True,
+    )
+    grade_count = fields.Integer(
+        string='Grade Count',
+        compute='_compute_grade_count',
+        store=True,
+    )
     
     # TODO: Add remaining computed fields
     
-    @api.depends('enrollment_ids', 'enrollment_ids.state')
+    @api.depends('enrollment_ids', 'enrollment_ids.state', 'max_students')
     def _compute_enrollment_stats(self):
         """
         TODO: Implement enrollment statistics computation
         Calculate enrolled_count, available_seats, is_full
         """
         for record in self:
-            # YOUR CODE HERE
-            record.enrolled_count = 0
+            confirmed_enrollments = record.enrollment_ids.filtered(lambda e: e.state == 'confirmed')
+            record.enrolled_count = len(confirmed_enrollments)
+            record.available_seats = record.max_students - record.enrolled_count
+            record.is_full = record.available_seats <= 0
+    
+    @api.depends('start_date', 'end_date')
+    def _compute_progress_percentage(self):
+        """Compute course progress based on dates"""
+        from datetime import date as dt_date
+        for record in self:
+            if record.start_date and record.end_date:
+                today = dt_date.today()
+                total_days = (record.end_date - record.start_date).days
+                elapsed_days = (today - record.start_date).days
+                if total_days > 0:
+                    record.progress_percentage = min(100.0, (elapsed_days / total_days) * 100)
+                else:
+                    record.progress_percentage = 0.0
+            else:
+                record.progress_percentage = 0.0
+    
+    @api.depends('grade_ids.score', 'grade_ids.max_score')
+    def _compute_average_grade(self):
+        """Compute average grade for the course"""
+        for record in self:
+            if record.grade_ids:
+                percentages = [
+                    (grade.score / grade.max_score * 100) if grade.max_score > 0 else 0
+                    for grade in record.grade_ids
+                ]
+                record.average_grade = sum(percentages) / len(percentages) if percentages else 0.0
+            else:
+                record.average_grade = 0.0
+    
+    @api.depends('grade_ids')
+    def _compute_grade_count(self):
+        """Compute the count of grades for this course"""
+        for record in self:
+            record.grade_count = len(record.grade_ids)
     
     # TODO: Implement remaining compute methods
     
@@ -131,12 +220,32 @@ class SchoolCourse(models.Model):
     # ==========================================================================
     
     _sql_constraints = [
-        # YOUR CODE HERE
+        ('unique_code', 'UNIQUE(code)', 'Course code must be unique!'),
+        ('check_credits', 'CHECK(credits >= 1 AND credits <= 10)', 'Credits must be between 1 and 10!'),
+        ('check_max_students', 'CHECK(max_students > 0)', 'Max students must be positive!'),
     ]
     
-    # YOUR CODE HERE - Python constraints
+    @api.constrains('start_date', 'end_date')
+    def _check_dates(self):
+        """Validate end_date is after start_date"""
+        for record in self:
+            if record.start_date and record.end_date:
+                if record.end_date < record.start_date:
+                    raise ValidationError('End date must be after start date!')
     
+    @api.constrains('min_students', 'max_students')
+    def _check_students(self):
+        """Validate min_students < max_students"""
+        for record in self:
+            if record.min_students >= record.max_students:
+                raise ValidationError('Minimum students must be less than maximum students!')
     
+    @api.constrains('prerequisite_ids')
+    def _check_prerequisites(self):
+        """Validate prerequisites do not include self"""
+        for record in self:
+            if record.prerequisite_ids.filtered(lambda p: p.id == record.id):
+                raise ValidationError('A course cannot be a prerequisite for itself!')
     # ==========================================================================
     # TODO 6: Implement State Transition Methods
     # ==========================================================================
@@ -148,12 +257,64 @@ class SchoolCourse(models.Model):
     # ==========================================================================
     
     def action_plan(self):
-        """TODO: Implement plan action"""
+        """Plan the course"""
         for record in self:
-            # YOUR CODE HERE
-            pass
+            if not record.teacher_id:
+                raise UserError('Course must have a teacher assigned before planning!')
+            record.state = 'planned'
+            record.message_post(body='Course has been planned')
     
-    # TODO: Implement remaining action methods
+    def action_start(self):
+        """Start the course"""
+        for record in self:
+            if record.enrolled_count < record.min_students:
+                raise UserError('Minimum number of students not met!')
+            record.state = 'in_progress'
+            record.message_post(body='Course has started')
+    
+    def action_complete(self):
+        """Complete the course"""
+        for record in self:
+            record.state = 'completed'
+            record.message_post(body='Course has been completed')
+    
+    def action_cancel(self):
+        """Cancel the course"""
+        for record in self:
+            if record.state == 'completed':
+                raise UserError('Cannot cancel a completed course!')
+            record.state = 'cancelled'
+            record.message_post(body='Course has been cancelled')
+    
+    def action_reset_draft(self):
+        """Reset course to draft"""
+        for record in self:
+            record.state = 'draft'
+            record.message_post(body='Course reset to draft')
+    
+    def action_view_enrollments(self):
+        """Open the enrollments view for this course"""
+        self.ensure_one()
+        return {
+            'name': _('Enrollments'),
+            'type': 'ir.actions.act_window',
+            'res_model': 'school.enrollment',
+            'view_mode': 'list,form',
+            'domain': [('course_id', '=', self.id)],
+            'context': {'default_course_id': self.id},
+        }
+    
+    def action_view_grades(self):
+        """Open the grades view for this course"""
+        self.ensure_one()
+        return {
+            'name': _('Grades'),
+            'type': 'ir.actions.act_window',
+            'res_model': 'school.grade',
+            'view_mode': 'list,form',
+            'domain': [('course_id', '=', self.id)],
+            'context': {'default_course_id': self.id},
+        }
     
     
     # ==========================================================================
@@ -168,7 +329,52 @@ class SchoolCourse(models.Model):
     def get_eligible_students(self):
         """TODO: Return students eligible to enroll (meet prerequisites)"""
         self.ensure_one()
-        return self.env['school.student']
+        # If no prerequisites, all students are eligible
+        if not self.prerequisite_ids:
+            return self.env['school.student'].search([])
+        
+        # Find students who have completed prerequisite courses
+        eligible_student_ids = set()
+        for prereq in self.prerequisite_ids:
+            for enrollment in prereq.enrollment_ids.filtered(lambda e: e.state == 'completed'):
+                eligible_student_ids.add(enrollment.student_id.id)
+        
+        return self.env['school.student'].browse(list(eligible_student_ids))
+    
+    def check_prerequisites(self, student):
+        """Check if a student meets prerequisites"""
+        self.ensure_one()
+        if not self.prerequisite_ids:
+            return True
+        
+        for prereq in self.prerequisite_ids:
+            completed = self.env['school.enrollment'].search([
+                ('student_id', '=', student.id),
+                ('course_id', '=', prereq.id),
+                ('state', '=', 'completed'),
+            ])
+            if not completed:
+                return False
+        return True
+    
+    def clone_for_next_term(self):
+        """Create a copy of this course for the next term"""
+        self.ensure_one()
+        from datetime import timedelta
+        new_course = self.copy(default={
+            'state': 'draft',
+            'code': self.code + '_2',
+            'enrollment_ids': [],
+        })
+        if self.start_date and self.end_date:
+            days_duration = (self.end_date - self.start_date).days
+            new_start = self.start_date + timedelta(days=365)
+            new_end = new_start + timedelta(days=days_duration)
+            new_course.write({
+                'start_date': new_start,
+                'end_date': new_end,
+            })
+        return new_course
     
     # TODO: Implement remaining methods
 
@@ -201,11 +407,34 @@ class SchoolCourseCategory(models.Model):
     # ==========================================================================
     
     name = fields.Char(string='Name', required=True)
-    # TODO: Add remaining fields
+    parent_id = fields.Many2one('school.course.category', string='Parent Category', ondelete='cascade')
+    child_ids = fields.One2many('school.course.category', 'parent_id', string='Child Categories')
+    parent_path = fields.Char(string='Parent Path', index=True)
+    complete_name = fields.Char(string='Complete Name', compute='_compute_complete_name', store=True, recursive=True)
+    course_ids = fields.One2many('school.course', 'category_id', string='Courses')
+    course_count = fields.Integer(string='Course Count', compute='_compute_course_count', store=True)
+    
+    @api.depends('name', 'parent_id.complete_name')
+    def _compute_complete_name(self):
+        """Compute complete hierarchical name"""
+        for record in self:
+            if record.parent_id:
+                record.complete_name = f"{record.parent_id.complete_name} / {record.name}"
+            else:
+                record.complete_name = record.name
+    
+    @api.depends('course_ids')
+    def _compute_course_count(self):
+        """Count courses in this category"""
+        for record in self:
+            record.course_count = len(record.course_ids)
     
     # TODO: Implement _compute_complete_name
     
     # TODO: Add SQL constraint for parent not being self
+    _sql_constraints = [
+        ('parent_not_self', 'CHECK(parent_id != id)', 'A category cannot be its own parent!'),
+    ]
 
 
 class SchoolCourseTag(models.Model):
@@ -229,4 +458,5 @@ class SchoolCourseTag(models.Model):
     # ==========================================================================
     
     name = fields.Char(string='Name', required=True)
-    # TODO: Add remaining fields
+    color = fields.Integer(string='Color')
+    course_ids = fields.Many2many('school.course', string='Courses')

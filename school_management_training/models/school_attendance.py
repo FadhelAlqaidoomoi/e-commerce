@@ -48,7 +48,17 @@ class SchoolAttendance(models.Model):
         default=fields.Date.today,
         index=True,
     )
-    # TODO: Add remaining basic fields
+    check_in = fields.Datetime(string='Check In')
+    check_out = fields.Datetime(string='Check Out')
+    status = fields.Selection([
+        ('present', 'Present'),
+        ('absent', 'Absent'),
+        ('late', 'Late'),
+        ('excused', 'Excused'),
+        ('half_day', 'Half Day'),
+    ], string='Status', default='absent')
+    remarks = fields.Text(string='Remarks')
+    is_excused = fields.Boolean(string='Is Excused', default=False)
     
     
     # ==========================================================================
@@ -60,6 +70,9 @@ class SchoolAttendance(models.Model):
     # ==========================================================================
     
     # YOUR CODE HERE - Relational Fields
+    student_id = fields.Many2one('school.student', string='Student', required=True, ondelete='cascade')
+    course_id = fields.Many2one('school.course', string='Course', required=True, ondelete='cascade')
+    recorded_by = fields.Many2one('res.users', string='Recorded By', default=lambda self: self.env.user)
     
     
     # ==========================================================================
@@ -76,13 +89,52 @@ class SchoolAttendance(models.Model):
         compute='_compute_display_name',
         store=True,
     )
+    duration_hours = fields.Float(string='Duration Hours', compute='_compute_duration_hours', store=True, digits=(5, 2))
+    is_on_time = fields.Boolean(string='Is On Time', compute='_compute_is_on_time', store=True)
+    day_of_week = fields.Selection([
+        ('0', 'Monday'),
+        ('1', 'Tuesday'),
+        ('2', 'Wednesday'),
+        ('3', 'Thursday'),
+        ('4', 'Friday'),
+        ('5', 'Saturday'),
+        ('6', 'Sunday'),
+    ], string='Day of Week', compute='_compute_day_of_week', store=True)
     
     @api.depends('student_id', 'course_id', 'date', 'status')
     def _compute_display_name(self):
         """TODO: Implement display name"""
         for record in self:
-            # YOUR CODE HERE
-            record.display_name = ''
+            record.display_name = f"{record.student_id.name} - {record.course_id.name} - {record.date} ({record.status})"
+    
+    @api.depends('check_in', 'check_out')
+    def _compute_duration_hours(self):
+        """Compute duration in hours"""
+        for record in self:
+            if record.check_in and record.check_out:
+                duration = record.check_out - record.check_in
+                record.duration_hours = duration.total_seconds() / 3600.0
+            else:
+                record.duration_hours = 0.0
+    
+    @api.depends('check_in')
+    def _compute_is_on_time(self):
+        """Check if student checked in before 9:00 AM"""
+        for record in self:
+            if record.check_in:
+                check_in_time = record.check_in.time()
+                record.is_on_time = check_in_time.hour < 9
+            else:
+                record.is_on_time = False
+    
+    @api.depends('date')
+    def _compute_day_of_week(self):
+        """Get day of week"""
+        for record in self:
+            if record.date:
+                record.day_of_week = str(record.date.weekday())
+            else:
+                record.day_of_week = '0'
     
     # TODO: Implement remaining computed fields
     
@@ -108,10 +160,27 @@ class SchoolAttendance(models.Model):
     def _check_times(self):
         """TODO: Validate check_out is after check_in"""
         for record in self:
-            # YOUR CODE HERE
-            pass
+            if record.check_in and record.check_out and record.check_out < record.check_in:
+                raise ValidationError('Check out time cannot be before check in time!')
     
-    # TODO: Implement remaining constraints
+    @api.constrains('date')
+    def _check_date_not_future(self):
+        """Validate date is not in the future"""
+        for record in self:
+            if record.date > date.today():
+                raise ValidationError('Attendance date cannot be in the future!')
+    
+    @api.constrains('student_id', 'course_id')
+    def _check_enrollment(self):
+        """Validate student is enrolled in the course"""
+        for record in self:
+            enrollment = self.env['school.enrollment'].search([
+                ('student_id', '=', record.student_id.id),
+                ('course_id', '=', record.course_id.id),
+                ('state', '=', 'confirmed'),
+            ])
+            if not enrollment:
+                raise ValidationError('Student is not enrolled in this course!')
     
     
     # ==========================================================================
@@ -121,7 +190,21 @@ class SchoolAttendance(models.Model):
     # - _onchange_status: If status is 'excused', set is_excused=True
     # ==========================================================================
     
-    # YOUR CODE HERE - Onchange methods
+    @api.onchange('check_in')
+    def _onchange_check_in(self):
+        """If check_in is after 9:00, suggest status='late'"""
+        if self.check_in:
+            check_in_time = self.check_in.time()
+            if check_in_time.hour >= 9 and check_in_time.minute > 0:
+                self.status = 'late'
+    
+    @api.onchange('status')
+    def _onchange_status(self):
+        """If status is 'excused', set is_excused=True"""
+        if self.status == 'excused':
+            self.is_excused = True
+        elif self.status != 'absent':
+            self.is_excused = False
     
     
     # ==========================================================================
@@ -134,14 +217,40 @@ class SchoolAttendance(models.Model):
     # ==========================================================================
     
     def mark_present(self):
-        """TODO: Mark attendance as present with current time"""
-        # YOUR CODE HERE
-        pass
+        """Mark attendance as present with current time"""
+        for record in self:
+            record.status = 'present'
+            if not record.check_in:
+                record.check_in = datetime.now()
     
     def mark_absent(self):
-        """TODO: Mark attendance as absent"""
-        # YOUR CODE HERE
-        pass
+        """Mark attendance as absent"""
+        for record in self:
+            record.status = 'absent'
+    
+    @api.model
+    def get_student_attendance_summary(self, student_id, date_from, date_to):
+        """Get attendance summary for student in date range"""
+        records = self.search([
+            ('student_id', '=', student_id),
+            ('date', '>=', date_from),
+            ('date', '<=', date_to),
+        ])
+        
+        total = len(records)
+        present = len(records.filtered(lambda r: r.status == 'present'))
+        absent = len(records.filtered(lambda r: r.status == 'absent'))
+        late = len(records.filtered(lambda r: r.status == 'late'))
+        excused = len(records.filtered(lambda r: r.is_excused))
+        
+        return {
+            'total': total,
+            'present': present,
+            'absent': absent,
+            'late': late,
+            'excused': excused,
+            'rate': (present / total * 100) if total > 0 else 0.0,
+        }
     
     # TODO: Implement remaining methods
     
@@ -164,12 +273,45 @@ class SchoolAttendance(models.Model):
         if attendance_date is None:
             attendance_date = fields.Date.today()
         
-        # YOUR CODE HERE
-        # 1. Get course and its confirmed enrollments
-        # 2. For each enrolled student, create attendance record if not exists
-        # 3. Return created records
+        course = self.env['school.course'].browse(course_id)
+        enrollments = self.env['school.enrollment'].search([
+            ('course_id', '=', course_id),
+            ('state', '=', 'confirmed'),
+        ])
+        
+        records_to_create = []
+        for enrollment in enrollments:
+            # Check if attendance already exists
+            existing = self.search([
+                ('student_id', '=', enrollment.student_id.id),
+                ('course_id', '=', course_id),
+                ('date', '=', attendance_date),
+            ])
+            
+            if not existing:
+                records_to_create.append({
+                    'student_id': enrollment.student_id.id,
+                    'course_id': course_id,
+                    'date': attendance_date,
+                    'status': 'absent',
+                })
+        
+        if records_to_create:
+            return self.create(records_to_create)
         
         return self.env['school.attendance']
+    
+    def bulk_mark_present(self, attendance_ids):
+        """Mark multiple records as present"""
+        records = self.env['school.attendance'].browse(attendance_ids)
+        for record in records:
+            record.mark_present()
+    
+    def bulk_mark_absent(self, attendance_ids):
+        """Mark multiple records as absent"""
+        records = self.env['school.attendance'].browse(attendance_ids)
+        for record in records:
+            record.mark_absent()
     
     # TODO: Implement bulk_mark_present and bulk_mark_absent
     
@@ -188,8 +330,9 @@ class SchoolAttendance(models.Model):
         TODO: Cron job to create daily attendance records
         Creates attendance records for all students in all active courses
         """
-        # YOUR CODE HERE
-        pass
+        active_courses = self.env['school.course'].search([('state', '=', 'in_progress')])
+        for course in active_courses:
+            self.bulk_create_attendance(course.id)
     
     # TODO: Implement _cron_send_absence_notifications
     
@@ -216,14 +359,32 @@ class SchoolAttendance(models.Model):
         if course_id:
             domain.append(('course_id', '=', course_id))
         
-        # YOUR CODE HERE - Use read_group to aggregate data
+        records = self.search(domain)
+        total = len(records)
+        present = len(records.filtered(lambda r: r.status == 'present'))
+        absent = len(records.filtered(lambda r: r.status == 'absent'))
+        late = len(records.filtered(lambda r: r.status == 'late'))
         
         return {
-            'total_records': 0,
-            'present_count': 0,
-            'absent_count': 0,
-            'late_count': 0,
-            'attendance_rate': 0.0,
+            'total_records': total,
+            'present_count': present,
+            'absent_count': absent,
+            'late_count': late,
+            'attendance_rate': (present / total * 100) if total > 0 else 0.0,
         }
+    
+    @api.model
+    def get_student_attendance_percentage(self, student_id, course_id=None):
+        """Get attendance percentage for a student"""
+        domain = [('student_id', '=', student_id)]
+        if course_id:
+            domain.append(('course_id', '=', course_id))
+        
+        records = self.search(domain)
+        if not records:
+            return 0.0
+        
+        present = len(records.filtered(lambda r: r.status == 'present'))
+        return (present / len(records)) * 100 if records else 0.0
     
     # TODO: Implement get_student_attendance_percentage

@@ -54,10 +54,10 @@ See INSTRUCTIONS.md for detailed guidance.
         'data/school_data.xml',
         
         # Views
+        'views/school_enrollment_views.xml',
         'views/school_student_views.xml',
         'views/school_teacher_views.xml',
         'views/school_course_views.xml',
-        'views/school_enrollment_views.xml',
         'views/school_grade_views.xml',
         'views/school_attendance_views.xml',
         'views/school_menu.xml',

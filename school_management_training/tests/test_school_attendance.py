@@ -234,8 +234,8 @@ class TestSchoolAttendance(TransactionCase):
             'state': 'confirmed',
         })
         
-        # Use a different date to avoid conflicts
-        test_date = date.today() + timedelta(days=1)
+        # Use a past date to avoid validation error (date cannot be in future)
+        test_date = date.today() - timedelta(days=1)
         
         records = self.Attendance.bulk_create_attendance(
             self.course.id, 

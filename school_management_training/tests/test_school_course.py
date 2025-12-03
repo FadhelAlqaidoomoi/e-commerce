@@ -178,7 +178,7 @@ class TestSchoolCourse(TransactionCase):
             'state': 'draft',
         })
         
-        with self.assertRaises((ValidationError, UserError)):
+        with self.assertRaises(UserError):
             course.action_plan()
     
     def test_15_action_plan_success(self):

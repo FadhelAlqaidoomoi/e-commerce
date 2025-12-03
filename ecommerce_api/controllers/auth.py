@@ -200,36 +200,42 @@ class EcommerceApiAuth(http.Controller):
                     status=409
                 )
             
-            # Create the user using signup
-            values = {
+            # Create partner first
+            partner_vals = {
+                'name': name,
+                'email': email,
+                'ecommerce_registered': True,
+            }
+            if phone:
+                partner_vals['phone'] = phone
+            if whatsapp_number:
+                partner_vals['whatsapp_number'] = whatsapp_number
+                partner_vals['whatsapp_opt_in'] = whatsapp_opt_in
+            
+            partner = request.env['res.partner'].sudo().create(partner_vals)
+            
+            # Create the user directly
+            user_vals = {
                 'login': email,
                 'name': name,
                 'password': password,
+                'partner_id': partner.id,
+                'groups_id': [(6, 0, [request.env.ref('base.group_portal').id])],
             }
             
-            # Use Odoo's signup mechanism
-            db, login, password = request.env['res.users'].sudo().signup(values)
+            user = request.env['res.users'].sudo().with_context(no_reset_password=True).create(user_vals)
             
-            # Get the created user
-            user = request.env['res.users'].sudo().search([
-                ('login', '=', login)
-            ], limit=1)
-            
-            if user and user.partner_id:
-                # Update partner with additional info
-                partner_vals = {
-                    'ecommerce_registered': True,
-                }
-                if phone:
-                    partner_vals['phone'] = phone
-                if whatsapp_number:
-                    partner_vals['whatsapp_number'] = whatsapp_number
-                    partner_vals['whatsapp_opt_in'] = whatsapp_opt_in
-                
-                user.partner_id.sudo().write(partner_vals)
+            if not user:
+                return api_response(
+                    success=False,
+                    error='User creation failed',
+                    message='Failed to create user account',
+                    status=500
+                )
             
             # Auto-login the user
-            credential = {'login': login, 'password': data.get('password'), 'type': 'password'}
+            db = request.db
+            credential = {'login': email, 'password': password, 'type': 'password'}
             auth_info = request.session.authenticate(db, credential)
             
             if auth_info.get('uid'):

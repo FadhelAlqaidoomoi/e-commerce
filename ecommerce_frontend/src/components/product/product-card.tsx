@@ -16,12 +16,12 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product }: ProductCardProps) {
-  const { addItem, isLoading } = useCartStore();
+  const { addToCart, isLoading } = useCartStore();
 
   const handleAddToCart = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    await addItem(product.id, 1);
+    await addToCart(product.id, 1);
   };
 
   const imageUrl = getImageUrl(product.image);
@@ -30,13 +30,13 @@ export function ProductCard({ product }: ProductCardProps) {
 
   return (
     <Link href={`/shop/${product.id}`}>
-      <Card className="group h-full overflow-hidden transition-all hover:shadow-lg">
-        <div className="relative aspect-square overflow-hidden">
+      <Card className="group h-full overflow-hidden transition-all hover:shadow-lg flex flex-col">
+        <div className="relative aspect-square overflow-hidden bg-muted">
           <Image
             src={imageUrl}
             alt={product.name}
             fill
-            className="object-cover transition-transform group-hover:scale-105"
+            className="object-contain p-2 transition-transform group-hover:scale-105"
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           />
           {!product.in_stock && (
@@ -55,15 +55,13 @@ export function ProductCard({ product }: ProductCardProps) {
             </Badge>
           )}
         </div>
-        <CardContent className="p-4">
-          <h3 className="font-semibold line-clamp-2 group-hover:text-primary transition-colors">
+        <CardContent className="p-4 flex-1 flex flex-col">
+          <h3 className="font-semibold line-clamp-2 group-hover:text-primary transition-colors min-h-[2.5rem]">
             {product.name}
           </h3>
-          {categoryName && (
-            <p className="text-xs text-muted-foreground mt-1">
-              {categoryName}
-            </p>
-          )}
+          <p className="text-xs text-muted-foreground mt-1 h-4">
+            {categoryName || "\u00A0"}
+          </p>
           <div className="mt-2 flex items-center gap-2">
             <span className="font-bold text-lg">
               {formatCurrency(product.price, product.currency)}
@@ -75,7 +73,7 @@ export function ProductCard({ product }: ProductCardProps) {
             )}
           </div>
         </CardContent>
-        <CardFooter className="p-4 pt-0">
+        <CardFooter className="p-4 pt-0 mt-auto">
           <Button
             className="w-full"
             onClick={handleAddToCart}

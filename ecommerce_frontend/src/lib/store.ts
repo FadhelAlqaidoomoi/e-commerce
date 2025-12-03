@@ -1,7 +1,7 @@
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
+import { createJSONStorage, persist } from 'zustand/middleware';
 import { odooApi } from './api';
-import type { SessionInfo, Cart, CartCount, User, Partner } from './types';
+import type { Cart, Partner, User } from './types';
 
 interface AuthState {
     isAuthenticated: boolean;
@@ -11,8 +11,8 @@ interface AuthState {
     sessionId: string | null;
 
     // Actions
-    login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-    register: (name: string, email: string, password: string, phone?: string) => Promise<{ success: boolean; error?: string }>;
+    login: (data: { email: string; password: string }) => Promise<{ success: boolean; error?: string }>;
+    register: (data: { name: string; email: string; password: string; phone?: string }) => Promise<{ success: boolean; error?: string }>;
     logout: () => Promise<void>;
     checkSession: () => Promise<void>;
     updatePartner: (partner: Partner) => void;
@@ -48,12 +48,12 @@ export const useAuthStore = create<AuthState>()(
     persist(
         (set, get) => ({
             isAuthenticated: false,
-            isLoading: true,
+            isLoading: false,
             user: null,
             partner: null,
             sessionId: null,
 
-            login: async (email, password) => {
+            login: async ({ email, password }) => {
                 set({ isLoading: true });
                 const response = await odooApi.login({ email, password });
 
@@ -72,7 +72,7 @@ export const useAuthStore = create<AuthState>()(
                 return { success: false, error: response.error || response.message };
             },
 
-            register: async (name, email, password, phone) => {
+            register: async ({ name, email, password, phone }) => {
                 set({ isLoading: true });
                 const response = await odooApi.register({ name, email, password, phone });
 

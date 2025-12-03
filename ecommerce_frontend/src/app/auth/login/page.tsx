@@ -1,15 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
 import { Loader2 } from "lucide-react";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 
-import { useAuthStore } from "@/lib/store";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { useAuthStore } from "@/lib/store";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -102,7 +102,7 @@ export default function LoginPage() {
             <p className="text-sm text-center text-muted-foreground">
               Don&apos;t have an account?{" "}
               <Link
-                href={`/register${redirect !== "/" ? `?redirect=${redirect}` : ""}`}
+                href={`/auth/register${redirect !== "/" ? `?redirect=${redirect}` : ""}`}
                 className="text-primary hover:underline"
               >
                 Create one

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ShoppingCart } from "lucide-react";
 
 import { Product } from "@/lib/types";
-import { formatCurrency, getPlaceholderImage, getDiscountPercentage } from "@/lib/utils";
+import { formatCurrency, getImageUrl, getDiscountPercentage } from "@/lib/utils";
 import { useCartStore } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
@@ -24,7 +24,7 @@ export function ProductCard({ product }: ProductCardProps) {
     await addItem(product.id, 1);
   };
 
-  const imageUrl = product.image || getPlaceholderImage(300, 300);
+  const imageUrl = getImageUrl(product.image);
   const discountPercentage = getDiscountPercentage(product.price, product.compare_price);
   const categoryName = product.categories?.[0]?.name;
 

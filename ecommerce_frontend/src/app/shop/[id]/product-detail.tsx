@@ -6,7 +6,7 @@ import Link from "next/link";
 import { ChevronLeft, Minus, Plus, ShoppingCart } from "lucide-react";
 
 import { Product, ProductVariant } from "@/lib/types";
-import { formatCurrency, getPlaceholderImage, getDiscountPercentage } from "@/lib/utils";
+import { formatCurrency, getImageUrl, getDiscountPercentage } from "@/lib/utils";
 import { useCartStore } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -21,7 +21,7 @@ export function ProductDetail({ product }: ProductDetailProps) {
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(
     product.variants?.[0] || null
   );
-  const [mainImage, setMainImage] = useState(product.image_large || product.image);
+  const [mainImage, setMainImage] = useState(getImageUrl(product.image_large || product.image));
 
   const { addItem, isLoading } = useCartStore();
 
@@ -46,13 +46,13 @@ export function ProductDetail({ product }: ProductDetailProps) {
   const handleVariantChange = (variant: ProductVariant) => {
     setSelectedVariant(variant);
     if (variant.image) {
-      setMainImage(variant.image);
+      setMainImage(getImageUrl(variant.image));
     }
   };
 
   const allImages = [
-    product.image_large || product.image,
-    ...(product.additional_images?.map((img) => img.url) || []),
+    getImageUrl(product.image_large || product.image),
+    ...(product.additional_images?.map((img) => getImageUrl(img.url)) || []),
   ].filter(Boolean) as string[];
 
   const inStock = selectedVariant ? selectedVariant.in_stock : product.in_stock;
@@ -76,7 +76,7 @@ export function ProductDetail({ product }: ProductDetailProps) {
           {/* Main Image */}
           <div className="relative aspect-square overflow-hidden rounded-lg bg-muted">
             <Image
-              src={mainImage || getPlaceholderImage(600, 600)}
+              src={mainImage || getImageUrl(null)}
               alt={product.name}
               fill
               className="object-cover"
@@ -282,7 +282,7 @@ export function ProductDetail({ product }: ProductDetailProps) {
                   >
                     <div className="relative aspect-square rounded-lg overflow-hidden bg-muted mb-2">
                       <Image
-                        src={p.image || getPlaceholderImage(200, 200)}
+                        src={getImageUrl(p.image)}
                         alt={p.name}
                         fill
                         className="object-cover group-hover:scale-105 transition-transform"
@@ -313,7 +313,7 @@ export function ProductDetail({ product }: ProductDetailProps) {
                   >
                     <div className="relative aspect-square rounded-lg overflow-hidden bg-muted mb-2">
                       <Image
-                        src={p.image || getPlaceholderImage(200, 200)}
+                        src={getImageUrl(p.image)}
                         alt={p.name}
                         fill
                         className="object-cover group-hover:scale-105 transition-transform"

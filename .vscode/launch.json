@@ -8,42 +8,17 @@
             "name": "odoo18 Fadhel",
             "type": "debugpy",
             "request": "launch",
-            "program": "C:\\odoo\\odoo18\\odoo\\odoo-bin",
+            "program": "/Users/fadhelalqaidoom/Desktop/odoo/odoo18/odoo/odoo-bin",
             "console": "internalConsole",
             "args": [
-                "--config=C:\\odoo\\odoo18\\fadhel-addons\\.vscode\\odoo.conf",
+                "--config=/Users/fadhelalqaidoom/Desktop/e-commerce/e-commerce/.vscode/odoo.conf",
                 "--dev=xml",
                 // "--log-handler=:DEBUG",
-                "--database=18-fadhel-latest",
+                "--database=18-ecommerce",
                 // "-i base",
-                "--init=school_management_training",
-                // "--update=base",
+                "--init=ecommerce_api",
+                // "--update=ecommerce_api",
             ]
         },
-        {
-            "name": "odoo18 Fadhel shell",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "C:\\odoo\\odoo18\\odoo\\odoo-bin",
-            "console": "integratedTerminal",
-            "args": [
-                "shell",
-                "--config=C:\\odoo\\odoo18\\fadhel-addons\\.vscode\\odoo.conf",
-                "--no-http"
-            ]
-        },
-        {
-            "name": "odoo18 Fadhel update",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "C:\\odoo\\odoo18\\odoo\\odoo-bin",
-            "console": "integratedTerminal",
-            "args": [
-                "--config=C:\\odoo\\odoo18\\fadhel-addons\\.vscode\\odoo.conf",
-                "--stop-after-init",
-                "--database=odoo-18-cyberani-odoo",
-                "--update=oi_purchase_requisition_cr_contract_risk_management,oi_purchase_requisition_cr",
-            ]
-        }
     ]
 }

@@ -1,0 +1,29 @@
+{
+    "folders": [
+		{
+			"path": "../.."
+		},
+		{
+			"path": "../../../odoo/odoo18/enterprise"
+		},
+		{
+			"path": "../../../odoo/odoo18/odoo"
+		}
+	],
+    "settings": {
+        "python.autoComplete.extraPaths": [
+			"/Users/fadhelalqaidoom/Desktop/e-commerce",
+            "/Users/fadhelalqaidoom/Desktop/odoo/odoo18/enterprise",
+            "/Users/fadhelalqaidoom/Desktop/odoo/odoo18/odoo",
+		],
+		"python.analysis.extraPaths": [
+			"/Users/fadhelalqaidoom/Desktop/e-commerce",
+            "/Users/fadhelalqaidoom/Desktop/odoo/odoo18/enterprise",
+            "/Users/fadhelalqaidoom/Desktop/odoo/odoo18/odoo",
+		],
+        "xml.symbols.enabled": false,
+        "python.languageServer": "None"
+    }
+
+
+}

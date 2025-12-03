@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 
 import { OdooApiClient } from "@/lib/api";
+import { getImageUrl } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ProductCard } from "@/components/product/product-card";
 
@@ -81,7 +82,7 @@ export default async function HomePage() {
               >
                 {category.image && (
                   <img
-                    src={category.image}
+                    src={getImageUrl(category.image)}
                     alt={category.name}
                     className="absolute inset-0 h-full w-full object-cover transition-transform group-hover:scale-105"
                   />

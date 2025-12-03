@@ -2,7 +2,6 @@ import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 
 import { ProductCard } from "@/components/product/product-card";
-import { Button } from "@/components/ui/button";
 import { OdooApiClient } from "@/lib/api";
 import { getImageUrl } from "@/lib/utils";
 
@@ -37,7 +36,7 @@ export default async function HomePage() {
   return (
     <div className="flex flex-col gap-12 pb-12">
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-r from-primary to-primary/80 text-primary-foreground">
+      {/* <section className="relative bg-gradient-to-r from-primary to-primary/80 text-primary-foreground">
         <div className="container py-24 md:py-32">
           <div className="max-w-2xl">
             <h1 className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
@@ -57,11 +56,12 @@ export default async function HomePage() {
             </div>
           </div>
         </div>
-      </section>
+      </section> */}
 
       {/* Categories Section */}
       {categories.length > 0 && (
         <section className="container">
+            <br/>
           <div className="flex items-center justify-between mb-8">
             <h2 className="text-2xl font-bold tracking-tight">
               Shop by Category

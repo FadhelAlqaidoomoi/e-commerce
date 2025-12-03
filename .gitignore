@@ -40,3 +40,4 @@ package.json
 #PyDev
 .project
 .pydevproject
+.DS_Store

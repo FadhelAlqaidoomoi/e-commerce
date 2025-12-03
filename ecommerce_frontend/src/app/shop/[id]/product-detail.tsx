@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useCartStore } from "@/lib/store";
 import { Product, ProductVariant } from "@/lib/types";
-import { formatCurrency, getDiscountPercentage, getImageUrl } from "@/lib/utils";
+import { formatCurrency, getDiscountPercentage, getImageUrl, isLocalImage } from "@/lib/utils";
 
 interface ProductDetailProps {
   product: Product;
@@ -79,6 +79,7 @@ export function ProductDetail({ product }: ProductDetailProps) {
               src={mainImage || getImageUrl(null)}
               alt={product.name}
               fill
+              unoptimized={isLocalImage(mainImage)}
               className="object-cover"
               sizes="(max-width: 1024px) 100vw, 50vw"
               priority
@@ -114,6 +115,7 @@ export function ProductDetail({ product }: ProductDetailProps) {
                     src={img}
                     alt={`${product.name} ${index + 1}`}
                     fill
+                    unoptimized={isLocalImage(img)}
                     className="object-cover"
                     sizes="80px"
                   />
@@ -285,6 +287,7 @@ export function ProductDetail({ product }: ProductDetailProps) {
                         src={getImageUrl(p.image)}
                         alt={p.name}
                         fill
+                        unoptimized={isLocalImage(getImageUrl(p.image))}
                         className="object-cover group-hover:scale-105 transition-transform"
                         sizes="(max-width: 768px) 50vw, 25vw"
                       />
@@ -316,6 +319,7 @@ export function ProductDetail({ product }: ProductDetailProps) {
                         src={getImageUrl(p.image)}
                         alt={p.name}
                         fill
+                        unoptimized={isLocalImage(getImageUrl(p.image))}
                         className="object-cover group-hover:scale-105 transition-transform"
                         sizes="(max-width: 768px) 50vw, 25vw"
                       />

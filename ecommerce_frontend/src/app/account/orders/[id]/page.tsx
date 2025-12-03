@@ -1,20 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
+import { CheckCircle, ChevronLeft } from "lucide-react";
 import Image from "next/image";
-import { ChevronLeft, CheckCircle } from "lucide-react";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 
-import { useAuthStore } from "@/lib/store";
-import { odooApi } from "@/lib/api";
-import { Order } from "@/lib/types";
-import { formatCurrency, formatDate, formatDateTime, getOrderStatusColor, getPlaceholderImage } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import { odooApi } from "@/lib/api";
+import { useAuthStore } from "@/lib/store";
+import { Order } from "@/lib/types";
+import { formatCurrency, formatDate, formatDateTime, getOrderStatusColor, getPlaceholderImage, isLocalImage } from "@/lib/utils";
 
 interface OrderDetailPageProps {
   params: Promise<{ id: string }>;
@@ -168,6 +168,7 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
                         src={line.image || getPlaceholderImage(80, 80)}
                         alt={line.product_name}
                         fill
+                        unoptimized={isLocalImage(line.image)}
                         className="object-cover"
                         sizes="80px"
                       />

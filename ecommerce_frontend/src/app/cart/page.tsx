@@ -1,16 +1,16 @@
 "use client";
 
-import { useEffect } from "react";
-import Link from "next/link";
-import Image from "next/image";
 import { Minus, Plus, ShoppingBag, Trash2 } from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
+import { useEffect } from "react";
 
-import { useCartStore } from "@/lib/store";
-import { formatCurrency, getPlaceholderImage } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useCartStore } from "@/lib/store";
+import { formatCurrency, getPlaceholderImage, isLocalImage } from "@/lib/utils";
 
 export default function CartPage() {
   const { cart, isLoading, fetchCart, updateItem, removeItem } = useCartStore();
@@ -91,6 +91,7 @@ export default function CartPage() {
                         src={line.image || getPlaceholderImage(96, 96)}
                         alt={line.product_name}
                         fill
+                        unoptimized={isLocalImage(line.image)}
                         className="object-cover"
                         sizes="96px"
                       />

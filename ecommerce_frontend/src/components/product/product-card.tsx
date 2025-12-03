@@ -27,6 +27,7 @@ export function ProductCard({ product }: ProductCardProps) {
   const imageUrl = getImageUrl(product.image);
   const discountPercentage = getDiscountPercentage(product.price, product.compare_price);
   const categoryName = product.categories?.[0]?.name;
+  const isLocalImage = imageUrl.includes('localhost') || imageUrl.includes('127.0.0.1');
 
   return (
     <Link href={`/shop/${product.id}`}>
@@ -36,6 +37,7 @@ export function ProductCard({ product }: ProductCardProps) {
             src={imageUrl}
             alt={product.name}
             fill
+            unoptimized={isLocalImage}
             className="object-contain p-2 transition-transform group-hover:scale-105"
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           />

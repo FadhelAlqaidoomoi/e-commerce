@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <!-- Default API Configuration -->
+        <record id="default_api_config" model="ecommerce.api.config">
+            <field name="name">Default E-commerce API Configuration</field>
+            <field name="active">True</field>
+            <field name="allowed_origins">http://localhost:3000,http://127.0.0.1:3000,https://localhost:3000</field>
+            <field name="products_per_page">20</field>
+            <field name="guest_checkout_enabled">True</field>
+            <field name="registration_enabled">True</field>
+            <field name="whatsapp_enabled">False</field>
+        </record>
+    </data>
+</odoo>

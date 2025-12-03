@@ -1,0 +1,36 @@
+{
+	"folders": [
+		{
+			"name": "enterprise",
+			"path": "../../enterprise"
+		},
+		{
+			"name": "odoo",
+			"path": "../../odoo"
+		},
+		{
+			"path": ".."
+		},
+		{
+			"path": "../../odoo-gitbook"
+		}
+	],
+	"settings": {
+		"python.autoComplete.extraPaths": [
+			"C:\\odoo\\odoo18\\odoo",
+			"C:\\odoo\\odoo18\\odoo\\addons",
+			"C:\\odoo\\odoo18\\enterprise",
+			"C:\\odoo\\odoo18\\fadhel-addons"
+		],
+		"python.analysis.extraPaths": [
+			"C:\\odoo\\odoo18\\odoo",
+			"C:\\odoo\\odoo18\\odoo\\addons",
+			"C:\\odoo\\odoo18\\enterprise",
+			"C:\\odoo\\odoo18\\fadhel-addons"
+		],
+		"python.languageServer": "None",
+		"python.analysis.typeCheckingMode": "off",
+		"powershell.cwd": "enterprise",
+		"xml.symbols.enabled": false
+	}
+}

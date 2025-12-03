@@ -1,15 +1,15 @@
 {
     "folders": [
-		{
-			"path": "../.."
-		},
-		{
-			"path": "../../../odoo/odoo18/enterprise"
-		},
-		{
-			"path": "../../../odoo/odoo18/odoo"
-		}
-	],
+        {
+            "path": "../../../odoo/odoo18/enterprise"
+        },
+        {
+            "path": "../../../odoo/odoo18/odoo"
+        },
+        {
+            "path": ".."
+        }
+    ],
     "settings": {
         "python.autoComplete.extraPaths": [
 			"/Users/fadhelalqaidoom/Desktop/e-commerce",

@@ -1,15 +1,15 @@
 "use client";
 
+import { ShoppingCart } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { ShoppingCart } from "lucide-react";
 
-import { Product } from "@/lib/types";
-import { formatCurrency, getImageUrl, getDiscountPercentage } from "@/lib/utils";
-import { useCartStore } from "@/lib/store";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { useCartStore } from "@/lib/store";
+import { Product } from "@/lib/types";
+import { formatCurrency, getDiscountPercentage, getImageUrl } from "@/lib/utils";
 
 interface ProductCardProps {
   product: Product;

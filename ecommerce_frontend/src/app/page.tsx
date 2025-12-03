@@ -1,10 +1,10 @@
-import Link from "next/link";
 import { ArrowRight } from "lucide-react";
+import Link from "next/link";
 
+import { ProductCard } from "@/components/product/product-card";
+import { Button } from "@/components/ui/button";
 import { OdooApiClient } from "@/lib/api";
 import { getImageUrl } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { ProductCard } from "@/components/product/product-card";
 
 async function getFeaturedProducts() {
   const api = new OdooApiClient();

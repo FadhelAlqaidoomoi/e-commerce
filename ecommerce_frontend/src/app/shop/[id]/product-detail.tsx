@@ -1,16 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { ChevronLeft, Minus, Plus, ShoppingCart } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { ChevronLeft, Minus, Plus, ShoppingCart } from "lucide-react";
+import { useState } from "react";
 
-import { Product, ProductVariant } from "@/lib/types";
-import { formatCurrency, getImageUrl, getDiscountPercentage } from "@/lib/utils";
-import { useCartStore } from "@/lib/store";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { useCartStore } from "@/lib/store";
+import { Product, ProductVariant } from "@/lib/types";
+import { formatCurrency, getDiscountPercentage, getImageUrl } from "@/lib/utils";
 
 interface ProductDetailProps {
   product: Product;

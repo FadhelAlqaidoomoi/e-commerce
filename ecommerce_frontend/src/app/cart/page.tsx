@@ -10,10 +10,10 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCartStore } from "@/lib/store";
-import { formatCurrency, getPlaceholderImage, isLocalImage } from "@/lib/utils";
+import { formatCurrency, getImageUrl, isLocalImage } from "@/lib/utils";
 
 export default function CartPage() {
-  const { cart, isLoading, fetchCart, updateItem, removeItem } = useCartStore();
+  const { cart, isLoading, fetchCart, updateQuantity, removeItem } = useCartStore();
 
   useEffect(() => {
     fetchCart();
@@ -88,10 +88,10 @@ export default function CartPage() {
                   <Link href={`/shop/${line.product_id}`} className="shrink-0">
                     <div className="relative w-24 h-24 rounded-md overflow-hidden bg-muted">
                       <Image
-                        src={line.image || getPlaceholderImage(96, 96)}
+                        src={getImageUrl(line.image)}
                         alt={line.product_name}
                         fill
-                        unoptimized={isLocalImage(line.image)}
+                        unoptimized={isLocalImage(getImageUrl(line.image))}
                         className="object-cover"
                         sizes="96px"
                       />
@@ -124,7 +124,7 @@ export default function CartPage() {
                         variant="outline"
                         size="icon"
                         className="h-8 w-8"
-                        onClick={() => updateItem(line.id, line.quantity - 1)}
+                        onClick={() => updateQuantity(line.id, line.quantity - 1)}
                         disabled={line.quantity <= 1 || isLoading}
                       >
                         <Minus className="h-3 w-3" />
@@ -134,7 +134,7 @@ export default function CartPage() {
                         variant="outline"
                         size="icon"
                         className="h-8 w-8"
-                        onClick={() => updateItem(line.id, line.quantity + 1)}
+                        onClick={() => updateQuantity(line.id, line.quantity + 1)}
                         disabled={isLoading}
                       >
                         <Plus className="h-3 w-3" />
@@ -172,16 +172,16 @@ export default function CartPage() {
             <CardContent className="space-y-4">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Subtotal</span>
-                <span>{formatCurrency(cart.amount_untaxed, cart.currency)}</span>
+                <span>{formatCurrency(cart.subtotal, cart.currency)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Tax</span>
-                <span>{formatCurrency(cart.amount_tax, cart.currency)}</span>
+                <span>{formatCurrency(cart.tax_total, cart.currency)}</span>
               </div>
               <Separator />
               <div className="flex justify-between font-semibold text-lg">
                 <span>Total</span>
-                <span>{formatCurrency(cart.amount_total, cart.currency)}</span>
+                <span>{formatCurrency(cart.total, cart.currency)}</span>
               </div>
             </CardContent>
             <CardFooter className="flex flex-col gap-2">

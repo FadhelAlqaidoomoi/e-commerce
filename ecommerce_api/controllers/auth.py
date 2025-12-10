@@ -20,6 +20,20 @@ class EcommerceApiAuth(http.Controller):
     Handles login, registration, logout, and session management.
     """
 
+    def _get_user_type(self, user):
+        """
+        Determine the user type based on Odoo groups.
+        
+        Returns:
+            str: 'internal', 'portal', or 'public'
+        """
+        if user._is_internal():
+            return 'internal'
+        elif user._is_portal():
+            return 'portal'
+        else:
+            return 'public'
+
     @http.route(
         '/api/v1/auth/login',
         type='http',
@@ -79,6 +93,9 @@ class EcommerceApiAuth(http.Controller):
             user = request.env['res.users'].sudo().browse(auth_info['uid'])
             partner = user.partner_id
             
+            # Determine user type based on Odoo groups
+            user_type = self._get_user_type(user)
+            
             # Get session info
             session_info = {
                 'session_id': request.session.sid,
@@ -90,6 +107,9 @@ class EcommerceApiAuth(http.Controller):
                     'email': user.email or user.login,
                 },
                 'partner': partner._get_api_data() if partner else None,
+                'user_type': user_type,
+                'is_internal': user._is_internal(),
+                'is_portal': user._is_portal(),
                 'is_public': user._is_public(),
             }
             
@@ -200,7 +220,7 @@ class EcommerceApiAuth(http.Controller):
                     status=409
                 )
             
-            # Create partner first
+            # Create partner first with ecommerce-specific fields
             partner_vals = {
                 'name': name,
                 'email': email,
@@ -214,16 +234,36 @@ class EcommerceApiAuth(http.Controller):
             
             partner = request.env['res.partner'].sudo().create(partner_vals)
             
-            # Create the user directly
-            user_vals = {
+            # Get the main company (required for user creation)
+            main_company = request.env['res.company'].sudo().search([], limit=1, order='id')
+            if not main_company:
+                return api_response(
+                    success=False,
+                    error='Configuration error',
+                    message='No company configured in the system',
+                    status=500
+                )
+            
+            # Get the portal group
+            portal_group = request.env.ref('base.group_portal')
+            
+            # Create portal user directly with all required fields
+            # Use with_user(SUPERUSER_ID) to ensure proper environment context
+            # This is needed because auth='none' has no user, which causes issues
+            # with mail module's message_post during user creation
+            user = request.env['res.users'].with_user(SUPERUSER_ID).with_context(
+                no_reset_password=True,
+                mail_create_nosubscribe=True,  # Don't subscribe to mail
+                mail_create_nolog=True,  # Don't log creation in chatter
+            ).create({
                 'login': email,
                 'name': name,
                 'password': password,
                 'partner_id': partner.id,
-                'groups_id': [(6, 0, [request.env.ref('base.group_portal').id])],
-            }
-            
-            user = request.env['res.users'].sudo().with_context(no_reset_password=True).create(user_vals)
+                'company_id': main_company.id,
+                'company_ids': [(6, 0, [main_company.id])],
+                'groups_id': [(6, 0, [portal_group.id])],
+            })
             
             if not user:
                 return api_response(
@@ -239,6 +279,8 @@ class EcommerceApiAuth(http.Controller):
             auth_info = request.session.authenticate(db, credential)
             
             if auth_info.get('uid'):
+                user_type = self._get_user_type(user)
+                
                 session_info = {
                     'session_id': request.session.sid,
                     'uid': auth_info['uid'],
@@ -249,6 +291,8 @@ class EcommerceApiAuth(http.Controller):
                         'email': user.email or user.login,
                     },
                     'partner': user.partner_id._get_api_data() if user.partner_id else None,
+                    'user_type': user_type,
+                    'is_portal': user._is_portal(),
                 }
                 
                 response = api_response(
@@ -351,6 +395,8 @@ class EcommerceApiAuth(http.Controller):
                 user = request.env['res.users'].sudo().browse(request.session.uid)
                 
                 if user.exists():
+                    user_type = self._get_user_type(user)
+                    
                     session_info = {
                         'authenticated': True,
                         'session_id': request.session.sid,
@@ -362,6 +408,9 @@ class EcommerceApiAuth(http.Controller):
                             'email': user.email or user.login,
                         },
                         'partner': user.partner_id._get_api_data(include_addresses=True) if user.partner_id else None,
+                        'user_type': user_type,
+                        'is_internal': user._is_internal(),
+                        'is_portal': user._is_portal(),
                         'is_public': user._is_public(),
                     }
                     
@@ -377,6 +426,7 @@ class EcommerceApiAuth(http.Controller):
                 data={
                     'authenticated': False,
                     'session_id': request.session.sid,
+                    'user_type': 'public',
                     'is_public': True,
                 },
                 message='Public session'

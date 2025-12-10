@@ -16,7 +16,7 @@
                 // "--log-handler=:DEBUG",
                 "--database=18-ecommerce",
                 // "-i base",
-                "--init=ecommerce_api",
+                "--update=ecommerce_api",
                 // "--update=ecommerce_api",
             ]
         },

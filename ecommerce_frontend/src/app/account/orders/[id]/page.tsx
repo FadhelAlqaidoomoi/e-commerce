@@ -14,7 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { odooApi } from "@/lib/api";
 import { useAuthStore } from "@/lib/store";
 import { Order } from "@/lib/types";
-import { formatCurrency, formatDate, formatDateTime, getOrderStatusColor, getPlaceholderImage, isLocalImage } from "@/lib/utils";
+import { formatCurrency, formatDate, formatDateTime, getImageUrl, getOrderStatusColor, isLocalImage } from "@/lib/utils";
 
 interface OrderDetailPageProps {
   params: Promise<{ id: string }>;
@@ -165,10 +165,10 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
                   <div key={line.id} className="flex gap-4 py-4 first:pt-0 last:pb-0">
                     <div className="relative w-20 h-20 rounded-md overflow-hidden bg-muted shrink-0">
                       <Image
-                        src={line.image || getPlaceholderImage(80, 80)}
+                        src={getImageUrl(line.image)}
                         alt={line.product_name}
                         fill
-                        unoptimized={isLocalImage(line.image)}
+                        unoptimized={isLocalImage(getImageUrl(line.image))}
                         className="object-cover"
                         sizes="80px"
                       />
@@ -192,48 +192,48 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
 
           {/* Addresses */}
           <div className="grid sm:grid-cols-2 gap-6">
-            {order.partner_shipping && (
+            {order.shipping_address && (
               <Card>
                 <CardHeader>
                   <CardTitle className="text-base">Shipping Address</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="font-medium">{order.partner_shipping.name}</p>
+                  <p className="font-medium">{order.shipping_address.name}</p>
                   <p className="text-sm text-muted-foreground mt-1">
-                    {order.partner_shipping.street}
-                    {order.partner_shipping.street2 && <>, {order.partner_shipping.street2}</>}
+                    {order.shipping_address.street}
+                    {order.shipping_address.street2 && <>, {order.shipping_address.street2}</>}
                     <br />
-                    {order.partner_shipping.city}
-                    {order.partner_shipping.state && `, ${order.partner_shipping.state.name}`}
-                    {order.partner_shipping.zip && ` ${order.partner_shipping.zip}`}
+                    {order.shipping_address.city}
+                    {order.shipping_address.state && `, ${order.shipping_address.state}`}
+                    {order.shipping_address.zip && ` ${order.shipping_address.zip}`}
                     <br />
-                    {order.partner_shipping.country?.name}
+                    {order.shipping_address.country}
                   </p>
-                  {order.partner_shipping.phone && (
+                  {order.shipping_address.phone && (
                     <p className="text-sm text-muted-foreground mt-2">
-                      Phone: {order.partner_shipping.phone}
+                      Phone: {order.shipping_address.phone}
                     </p>
                   )}
                 </CardContent>
               </Card>
             )}
 
-            {order.partner_invoice && (
+            {order.invoice_address && (
               <Card>
                 <CardHeader>
                   <CardTitle className="text-base">Billing Address</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="font-medium">{order.partner_invoice.name}</p>
+                  <p className="font-medium">{order.invoice_address.name}</p>
                   <p className="text-sm text-muted-foreground mt-1">
-                    {order.partner_invoice.street}
-                    {order.partner_invoice.street2 && <>, {order.partner_invoice.street2}</>}
+                    {order.invoice_address.street}
+                    {order.invoice_address.street2 && <>, {order.invoice_address.street2}</>}
                     <br />
-                    {order.partner_invoice.city}
-                    {order.partner_invoice.state && `, ${order.partner_invoice.state.name}`}
-                    {order.partner_invoice.zip && ` ${order.partner_invoice.zip}`}
+                    {order.invoice_address.city}
+                    {order.invoice_address.state && `, ${order.invoice_address.state}`}
+                    {order.invoice_address.zip && ` ${order.invoice_address.zip}`}
                     <br />
-                    {order.partner_invoice.country?.name}
+                    {order.invoice_address.country}
                   </p>
                 </CardContent>
               </Card>
@@ -262,18 +262,18 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
             <CardContent className="space-y-4">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Subtotal</span>
-                <span>{formatCurrency(order.amount_untaxed, order.currency)}</span>
+                <span>{formatCurrency(order.subtotal, order.currency)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Tax</span>
-                <span>{formatCurrency(order.amount_tax, order.currency)}</span>
+                <span>{formatCurrency(order.tax_total, order.currency)}</span>
               </div>
 
               <Separator />
 
               <div className="flex justify-between font-semibold text-lg">
                 <span>Total</span>
-                <span>{formatCurrency(order.amount_total, order.currency)}</span>
+                <span>{formatCurrency(order.total, order.currency)}</span>
               </div>
 
               <Separator />

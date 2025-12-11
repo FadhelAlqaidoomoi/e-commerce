@@ -139,7 +139,7 @@ class EcommerceApiAuth(http.Controller):
                 status=401
             )
         except Exception as e:
-            _logger.exception('Login error: %s', str(e))
+            print('Login error: %s', str(e))
             return api_response(
                 success=False,
                 error=str(e),
@@ -319,7 +319,7 @@ class EcommerceApiAuth(http.Controller):
             )
             
         except SignupError as e:
-            _logger.warning('Signup error: %s', str(e))
+            print('Signup error: %s', str(e))
             return api_response(
                 success=False,
                 error='Signup failed',
@@ -334,7 +334,7 @@ class EcommerceApiAuth(http.Controller):
                 status=400
             )
         except Exception as e:
-            _logger.exception('Registration error: %s', str(e))
+            print('Registration error: %s', str(e))
             return api_response(
                 success=False,
                 error=str(e),
@@ -369,7 +369,7 @@ class EcommerceApiAuth(http.Controller):
             return response
             
         except Exception as e:
-            _logger.exception('Logout error: %s', str(e))
+            print('Logout error: %s', str(e))
             return api_response(
                 success=False,
                 error=str(e),
@@ -433,7 +433,7 @@ class EcommerceApiAuth(http.Controller):
             )
             
         except Exception as e:
-            _logger.exception('Session check error: %s', str(e))
+            print('Session check error: %s', str(e))
             return api_response(
                 success=False,
                 error=str(e),
@@ -481,7 +481,7 @@ class EcommerceApiAuth(http.Controller):
                 try:
                     user.reset_password(email)
                 except Exception as e:
-                    _logger.warning('Password reset failed for %s: %s', email, str(e))
+                    print('Password reset failed for %s: %s', email, str(e))
             
             # Always return success to prevent email enumeration
             return api_response(
@@ -491,7 +491,7 @@ class EcommerceApiAuth(http.Controller):
             )
             
         except Exception as e:
-            _logger.exception('Password reset error: %s', str(e))
+            print('Password reset error: %s', str(e))
             return api_response(
                 success=True,  # Still return success to prevent enumeration
                 data=None,

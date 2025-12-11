@@ -237,8 +237,14 @@ export interface OrderLine {
 export interface Order {
     id: number;
     name: string;
-    state: 'draft' | 'sent' | 'sale' | 'cancel';
+    state: 'draft' | 'sent' | 'sale' | 'done' | 'cancel';
     state_label: string;
+    is_draft: boolean;
+    is_current_cart: boolean;
+    is_complete: boolean;
+    can_restore: boolean;
+    can_reorder: boolean;
+    can_cancel: boolean;
     date_order: string | null;
     commitment_date: string | null;
     create_date: string | null;
@@ -258,6 +264,7 @@ export interface Order {
     client_order_ref: string;
     lines?: OrderLine[];
     line_count?: number;
+    item_count?: number;
 }
 
 export interface OrdersResponse {

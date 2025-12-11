@@ -1,26 +1,30 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { ChevronLeft, Eye, Package, RotateCcw, ShoppingCart } from "lucide-react";
 import Link from "next/link";
-import { ChevronLeft, Package, Eye } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
-import { useAuthStore } from "@/lib/store";
-import { odooApi } from "@/lib/api";
-import { Order } from "@/lib/types";
-import { formatCurrency, formatDate, getOrderStatusColor } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { odooApi } from "@/lib/api";
+import { useAuthStore, useCartStore } from "@/lib/store";
+import { Order } from "@/lib/types";
+import { formatCurrency, formatDate, getOrderStatusColor } from "@/lib/utils";
+import { toast } from "sonner";
 
 export default function OrdersPage() {
   const router = useRouter();
   const { isAuthenticated } = useAuthStore();
+  const { fetchCart } = useCartStore();
 
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [restoringId, setRestoringId] = useState<number | null>(null);
+  const [reorderingId, setReorderingId] = useState<number | null>(null);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -31,8 +35,11 @@ export default function OrdersPage() {
     const fetchOrders = async () => {
       try {
         const response = await odooApi.getOrders();
+        console.log('Orders API response:', response);
         if (response.success && response.data) {
           setOrders(response.data.orders || []);
+        } else {
+          setError(response.message || "Failed to load orders");
         }
       } catch (err) {
         setError("Failed to load orders");
@@ -51,13 +58,51 @@ export default function OrdersPage() {
 
   const getStatusLabel = (state: string) => {
     const labels: Record<string, string> = {
-      draft: "Draft",
+      draft: "Incomplete",
       sent: "Quotation Sent",
       sale: "Confirmed",
       done: "Done",
       cancel: "Cancelled",
     };
     return labels[state] || state;
+  };
+
+  const handleRestore = async (orderId: number) => {
+    setRestoringId(orderId);
+    try {
+      const response = await odooApi.restoreOrder(orderId);
+      if (response.success) {
+        toast.success("Order restored to cart");
+        await fetchCart();
+        router.push("/cart");
+      } else {
+        toast.error(response.message || "Failed to restore order");
+      }
+    } catch (err) {
+      toast.error("Failed to restore order");
+      console.error(err);
+    } finally {
+      setRestoringId(null);
+    }
+  };
+
+  const handleReorder = async (orderId: number) => {
+    setReorderingId(orderId);
+    try {
+      const response = await odooApi.reorder(orderId);
+      if (response.success) {
+        toast.success("Items added to cart");
+        await fetchCart();
+        router.push("/cart");
+      } else {
+        toast.error(response.message || "Failed to reorder");
+      }
+    } catch (err) {
+      toast.error("Failed to reorder");
+      console.error(err);
+    } finally {
+      setReorderingId(null);
+    }
   };
 
   return (
@@ -116,7 +161,7 @@ export default function OrdersPage() {
       ) : (
         <div className="space-y-4">
           {orders.map((order) => (
-            <Card key={order.id}>
+            <Card key={order.id} className={order.is_current_cart ? "border-blue-300 bg-blue-50/50" : order.is_draft ? "border-yellow-300 bg-yellow-50/50" : ""}>
               <CardContent className="p-6">
                 <div className="flex flex-col sm:flex-row justify-between gap-4">
                   <div className="space-y-1">
@@ -125,28 +170,75 @@ export default function OrdersPage() {
                       <Badge className={getOrderStatusColor(order.state)}>
                         {getStatusLabel(order.state)}
                       </Badge>
+                      {order.is_current_cart && (
+                        <Badge variant="outline" className="border-blue-500 text-blue-600">
+                          Current Cart
+                        </Badge>
+                      )}
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      Placed on {formatDate(order.date_order)}
+                      {order.date_order ? `Placed on ${formatDate(order.date_order)}` : `Created on ${formatDate(order.create_date)}`}
                     </p>
-                    {order.lines && (
+                    {order.line_count !== undefined && (
                       <p className="text-sm text-muted-foreground">
-                        {order.lines.length} item{order.lines.length !== 1 ? "s" : ""}
+                        {order.line_count} item{order.line_count !== 1 ? "s" : ""}
+                      </p>
+                    )}
+                    {order.is_current_cart && (
+                      <p className="text-sm text-blue-700 font-medium">
+                        This is your active shopping cart
+                      </p>
+                    )}
+                    {order.is_draft && !order.is_current_cart && (
+                      <p className="text-sm text-yellow-700 font-medium">
+                        This order was not completed
                       </p>
                     )}
                   </div>
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-3">
                     <div className="text-right">
                       <p className="font-semibold text-lg">
-                        {formatCurrency(order.amount_total, order.currency)}
+                        {formatCurrency(order.total, order.currency)}
                       </p>
                     </div>
-                    <Button asChild variant="outline" size="sm">
-                      <Link href={`/account/orders/${order.id}`}>
-                        <Eye className="mr-2 h-4 w-4" />
-                        View
-                      </Link>
-                    </Button>
+                    <div className="flex gap-2">
+                      {order.is_current_cart && (
+                        <Button asChild variant="default" size="sm">
+                          <Link href="/cart">
+                            <ShoppingCart className="mr-2 h-4 w-4" />
+                            Go to Cart
+                          </Link>
+                        </Button>
+                      )}
+                      {order.can_restore && (
+                        <Button 
+                          variant="default" 
+                          size="sm"
+                          onClick={() => handleRestore(order.id)}
+                          disabled={restoringId === order.id}
+                        >
+                          <ShoppingCart className="mr-2 h-4 w-4" />
+                          {restoringId === order.id ? "Restoring..." : "Continue"}
+                        </Button>
+                      )}
+                      {order.can_reorder && (
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => handleReorder(order.id)}
+                          disabled={reorderingId === order.id}
+                        >
+                          <RotateCcw className="mr-2 h-4 w-4" />
+                          {reorderingId === order.id ? "Adding..." : "Reorder"}
+                        </Button>
+                      )}
+                      <Button asChild variant="outline" size="sm">
+                        <Link href={`/account/orders/${order.id}`}>
+                          <Eye className="mr-2 h-4 w-4" />
+                          View
+                        </Link>
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </CardContent>

@@ -68,7 +68,7 @@ class EcommerceApiUser(http.Controller):
             )
             
         except Exception as e:
-            _logger.exception('Error getting profile: %s', str(e))
+            print('Error getting profile: %s', str(e))
             return api_response(
                 success=False,
                 error=str(e),
@@ -176,7 +176,7 @@ class EcommerceApiUser(http.Controller):
             )
             
         except Exception as e:
-            _logger.exception('Error updating profile: %s', str(e))
+            print('Error updating profile: %s', str(e))
             return api_response(
                 success=False,
                 error=str(e),
@@ -276,7 +276,7 @@ class EcommerceApiUser(http.Controller):
             )
             
         except Exception as e:
-            _logger.exception('Error getting addresses: %s', str(e))
+            print('Error getting addresses: %s', str(e))
             return api_response(
                 success=False,
                 error=str(e),
@@ -389,7 +389,7 @@ class EcommerceApiUser(http.Controller):
             )
             
         except Exception as e:
-            _logger.exception('Error adding address: %s', str(e))
+            print('Error adding address: %s', str(e))
             return api_response(
                 success=False,
                 error=str(e),
@@ -472,7 +472,7 @@ class EcommerceApiUser(http.Controller):
             )
             
         except Exception as e:
-            _logger.exception('Error updating address: %s', str(e))
+            print('Error updating address: %s', str(e))
             return api_response(
                 success=False,
                 error=str(e),
@@ -542,7 +542,7 @@ class EcommerceApiUser(http.Controller):
             )
             
         except Exception as e:
-            _logger.exception('Error deleting address: %s', str(e))
+            print('Error deleting address: %s', str(e))
             return api_response(
                 success=False,
                 error=str(e),
@@ -625,7 +625,7 @@ class EcommerceApiUser(http.Controller):
             )
             
         except Exception as e:
-            _logger.exception('Error changing password: %s', str(e))
+            print('Error changing password: %s', str(e))
             return api_response(
                 success=False,
                 error=str(e),

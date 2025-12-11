@@ -40,13 +40,25 @@ class EcommerceApiOrders(http.Controller):
             'discount': line.discount,
         }
 
-    def _format_order(self, order, include_lines=True):
+    def _format_order(self, order, include_lines=True, current_cart_id=None):
         """Format order data for API response."""
+        is_current_cart = current_cart_id and order.id == current_cart_id
+        # Determine if order can be restored to cart (only draft orders that are NOT the current cart)
+        can_restore = order.state == 'draft' and not is_current_cart
+        # Determine if order can be reordered (completed or cancelled orders)
+        can_reorder = order.state in ['sale', 'done', 'cancel']
+        
         data = {
             'id': order.id,
             'name': order.name,
             'state': order.state,
             'state_label': dict(order._fields['state'].selection).get(order.state, order.state),
+            'is_draft': order.state == 'draft',
+            'is_current_cart': is_current_cart,
+            'is_complete': order.state in ['sale', 'done'],
+            'can_restore': can_restore,
+            'can_reorder': can_reorder,
+            'can_cancel': order.state in ['draft', 'sent'] and not is_current_cart,
             'date_order': order.date_order.isoformat() if order.date_order else None,
             'commitment_date': order.commitment_date.isoformat() if order.commitment_date else None,
             'create_date': order.create_date.isoformat() if order.create_date else None,
@@ -144,14 +156,24 @@ class EcommerceApiOrders(http.Controller):
             state = kwargs.get('state')
             offset = (page - 1) * limit
             
-            # Build domain
+            # Get current cart ID for reference
+            current_cart_id = request.session.get('sale_order_id')
+            
+            print('Current cart session ID: %s', current_cart_id)
+            
+            # Build domain - show ALL orders including drafts and current cart
             domain = [
                 ('partner_id', '=', partner.id),
-                ('state', '!=', 'draft'),  # Don't show draft/cart orders
             ]
             
-            if state and state in ['sent', 'sale', 'cancel']:
-                domain.append(('state', '=', state))
+            # Filter by state if provided
+            if state:
+                if state == 'draft':
+                    domain.append(('state', '=', 'draft'))
+                elif state == 'pending':
+                    domain.append(('state', 'in', ['sent', 'draft']))
+                elif state in ['sent', 'sale', 'cancel', 'done']:
+                    domain.append(('state', '=', state))
             
             SaleOrder = request.env['sale.order'].sudo()
             
@@ -167,11 +189,13 @@ class EcommerceApiOrders(http.Controller):
             )
             
             orders_data = [
-                self._format_order(order, include_lines=False)
+                self._format_order(order, include_lines=False, current_cart_id=current_cart_id)
                 for order in orders
             ]
             
             total_pages = (total_count + limit - 1) // limit
+            
+            print('Getting orders for partner %s (id=%s), found %s orders', partner.name, partner.id, total_count)
             
             return api_response(
                 success=True,
@@ -184,13 +208,18 @@ class EcommerceApiOrders(http.Controller):
                         'total_pages': total_pages,
                         'has_next': page < total_pages,
                         'has_prev': page > 1,
+                    },
+                    'debug': {
+                        'partner_id': partner.id,
+                        'partner_name': partner.name,
+                        'user_id': request.session.uid,
                     }
                 },
                 message=f'Found {total_count} orders'
             )
             
         except Exception as e:
-            _logger.exception('Error getting orders: %s', str(e))
+            print('Error getting orders: %s', str(e))
             return api_response(
                 success=False,
                 error=str(e),
@@ -250,7 +279,7 @@ class EcommerceApiOrders(http.Controller):
             )
             
         except Exception as e:
-            _logger.exception('Error getting order: %s', str(e))
+            print('Error getting order: %s', str(e))
             return api_response(
                 success=False,
                 error=str(e),
@@ -426,7 +455,7 @@ class EcommerceApiOrders(http.Controller):
             )
             
         except Exception as e:
-            _logger.exception('Error creating order: %s', str(e))
+            print('Error creating order: %s', str(e))
             return api_response(
                 success=False,
                 error=str(e),
@@ -546,11 +575,89 @@ class EcommerceApiOrders(http.Controller):
             )
             
         except Exception as e:
-            _logger.exception('Error cancelling order: %s', str(e))
+            print('Error cancelling order: %s', str(e))
             return api_response(
                 success=False,
                 error=str(e),
                 message='Failed to cancel order',
+                status=500
+            )
+
+    @http.route(
+        '/api/v1/orders/<int:order_id>/restore',
+        type='http',
+        auth='public',
+        methods=['POST', 'OPTIONS'],
+        csrf=False
+    )
+    @cors_handler
+    def restore_order(self, order_id, **kwargs):
+        """
+        Restore a draft (incomplete) order as the current cart.
+        This allows users to continue with an order they didn't complete.
+        """
+        try:
+            if not request.session.uid:
+                return api_response(
+                    success=False,
+                    error='Authentication required',
+                    message='Please login to restore order',
+                    status=401
+                )
+            
+            user = request.env['res.users'].sudo().browse(request.session.uid)
+            partner = user.partner_id
+            
+            order = request.env['sale.order'].sudo().browse(order_id)
+            
+            if not order.exists():
+                return api_response(
+                    success=False,
+                    error='Order not found',
+                    message=f'Order with ID {order_id} not found',
+                    status=404
+                )
+            
+            # Check ownership
+            if order.partner_id.id != partner.id:
+                return api_response(
+                    success=False,
+                    error='Access denied',
+                    message='You do not have access to this order',
+                    status=403
+                )
+            
+            # Only draft orders can be restored
+            if order.state != 'draft':
+                return api_response(
+                    success=False,
+                    error='Cannot restore',
+                    message='Only incomplete (draft) orders can be restored to cart. Use reorder for completed orders.',
+                    status=400
+                )
+            
+            # Set this order as the current cart
+            request.session['sale_order_id'] = order.id
+            
+            # Return order data with lines
+            order_data = self._format_order(order, include_lines=True)
+            order_data['item_count'] = sum(
+                line.product_uom_qty for line in order.order_line 
+                if not line.is_delivery and line.product_id
+            )
+            
+            return api_response(
+                success=True,
+                data=order_data,
+                message=f'Order {order.name} restored to cart'
+            )
+            
+        except Exception as e:
+            print('Error restoring order: %s', str(e))
+            return api_response(
+                success=False,
+                error=str(e),
+                message='Failed to restore order',
                 status=500
             )
 
@@ -632,7 +739,7 @@ class EcommerceApiOrders(http.Controller):
             )
             
         except Exception as e:
-            _logger.exception('Error reordering: %s', str(e))
+            print('Error reordering: %s', str(e))
             return api_response(
                 success=False,
                 error=str(e),

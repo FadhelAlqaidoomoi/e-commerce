@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle, ChevronLeft } from "lucide-react";
+import { CheckCircle, ChevronLeft, RotateCcw, ShoppingCart, XCircle } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -12,9 +12,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { odooApi } from "@/lib/api";
-import { useAuthStore } from "@/lib/store";
+import { useAuthStore, useCartStore } from "@/lib/store";
 import { Order } from "@/lib/types";
 import { formatCurrency, formatDate, formatDateTime, getImageUrl, getOrderStatusColor, isLocalImage } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface OrderDetailPageProps {
   params: Promise<{ id: string }>;
@@ -26,11 +27,15 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
   const isNewOrder = searchParams.get("new") === "true";
   
   const { isAuthenticated } = useAuthStore();
+  const { fetchCart } = useCartStore();
 
   const [order, setOrder] = useState<Order | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [orderId, setOrderId] = useState<number | null>(null);
+  const [isRestoring, setIsRestoring] = useState(false);
+  const [isReordering, setIsReordering] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
 
   useEffect(() => {
     const getParams = async () => {
@@ -73,13 +78,74 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
 
   const getStatusLabel = (state: string) => {
     const labels: Record<string, string> = {
-      draft: "Draft",
+      draft: "Incomplete",
       sent: "Quotation Sent",
       sale: "Confirmed",
       done: "Done",
       cancel: "Cancelled",
     };
     return labels[state] || state;
+  };
+
+  const handleRestore = async () => {
+    if (!order) return;
+    setIsRestoring(true);
+    try {
+      const response = await odooApi.restoreOrder(order.id);
+      if (response.success) {
+        toast.success("Order restored to cart");
+        await fetchCart();
+        router.push("/cart");
+      } else {
+        toast.error(response.message || "Failed to restore order");
+      }
+    } catch (err) {
+      toast.error("Failed to restore order");
+      console.error(err);
+    } finally {
+      setIsRestoring(false);
+    }
+  };
+
+  const handleReorder = async () => {
+    if (!order) return;
+    setIsReordering(true);
+    try {
+      const response = await odooApi.reorder(order.id);
+      if (response.success) {
+        toast.success("Items added to cart");
+        await fetchCart();
+        router.push("/cart");
+      } else {
+        toast.error(response.message || "Failed to reorder");
+      }
+    } catch (err) {
+      toast.error("Failed to reorder");
+      console.error(err);
+    } finally {
+      setIsReordering(false);
+    }
+  };
+
+  const handleCancel = async () => {
+    if (!order) return;
+    if (!confirm("Are you sure you want to cancel this order?")) return;
+    
+    setIsCancelling(true);
+    try {
+      const response = await odooApi.cancelOrder(order.id);
+      if (response.success) {
+        toast.success("Order cancelled");
+        setOrder(response.data);
+      } else {
+        toast.error(response.message || "Failed to cancel order");
+      }
+    } catch (err) {
+      toast.error("Failed to cancel order");
+      console.error(err);
+    } finally {
+      setIsCancelling(false);
+    }
   };
 
   if (isLoading) {
@@ -144,12 +210,37 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Order {order.name}</h1>
           <p className="text-muted-foreground mt-1">
-            Placed on {formatDateTime(order.date_order)}
+            {order.date_order ? `Placed on ${formatDateTime(order.date_order)}` : `Created on ${formatDateTime(order.create_date)}`}
           </p>
+          {order.is_draft && (
+            <p className="text-yellow-700 font-medium mt-2">
+              This order was not completed. You can restore it to your cart to continue.
+            </p>
+          )}
         </div>
-        <Badge className={`text-sm ${getOrderStatusColor(order.state)}`}>
-          {getStatusLabel(order.state)}
-        </Badge>
+        <div className="flex items-center gap-3">
+          <Badge className={`text-sm ${getOrderStatusColor(order.state)}`}>
+            {getStatusLabel(order.state)}
+          </Badge>
+          {order.can_restore && (
+            <Button onClick={handleRestore} disabled={isRestoring}>
+              <ShoppingCart className="mr-2 h-4 w-4" />
+              {isRestoring ? "Restoring..." : "Continue Order"}
+            </Button>
+          )}
+          {order.can_reorder && (
+            <Button variant="outline" onClick={handleReorder} disabled={isReordering}>
+              <RotateCcw className="mr-2 h-4 w-4" />
+              {isReordering ? "Adding..." : "Reorder"}
+            </Button>
+          )}
+          {order.can_cancel && (
+            <Button variant="destructive" onClick={handleCancel} disabled={isCancelling}>
+              <XCircle className="mr-2 h-4 w-4" />
+              {isCancelling ? "Cancelling..." : "Cancel"}
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="grid lg:grid-cols-3 gap-8">

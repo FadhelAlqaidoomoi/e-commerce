@@ -163,7 +163,7 @@ class EcommerceApiCart(http.Controller):
             )
             
         except Exception as e:
-            _logger.exception('Error getting cart: %s', str(e))
+            print('Error getting cart: %s', str(e))
             return api_response(
                 success=False,
                 error=str(e),
@@ -283,7 +283,7 @@ class EcommerceApiCart(http.Controller):
             )
             
         except Exception as e:
-            _logger.exception('Error adding to cart: %s', str(e))
+            print('Error adding to cart: %s', str(e))
             return api_response(
                 success=False,
                 error=str(e),
@@ -376,7 +376,7 @@ class EcommerceApiCart(http.Controller):
             )
             
         except Exception as e:
-            _logger.exception('Error updating cart: %s', str(e))
+            print('Error updating cart: %s', str(e))
             return api_response(
                 success=False,
                 error=str(e),
@@ -437,7 +437,7 @@ class EcommerceApiCart(http.Controller):
             )
             
         except Exception as e:
-            _logger.exception('Error removing from cart: %s', str(e))
+            print('Error removing from cart: %s', str(e))
             return api_response(
                 success=False,
                 error=str(e),
@@ -480,7 +480,7 @@ class EcommerceApiCart(http.Controller):
             )
             
         except Exception as e:
-            _logger.exception('Error clearing cart: %s', str(e))
+            print('Error clearing cart: %s', str(e))
             return api_response(
                 success=False,
                 error=str(e),
@@ -530,7 +530,7 @@ class EcommerceApiCart(http.Controller):
             )
             
         except Exception as e:
-            _logger.exception('Error getting cart count: %s', str(e))
+            print('Error getting cart count: %s', str(e))
             return api_response(
                 success=False,
                 error=str(e),

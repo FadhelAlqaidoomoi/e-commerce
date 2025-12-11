@@ -1,21 +1,21 @@
 import type {
-    ApiResponse,
-    SessionInfo,
-    LoginCredentials,
-    RegisterData,
-    Product,
-    ProductsResponse,
-    Category,
-    Cart,
-    CartCount,
-    Order,
-    OrdersResponse,
-    CreateOrderInput,
-    Country,
-    Partner,
     Address,
     AddressInput,
+    ApiResponse,
+    Cart,
+    CartCount,
+    Category,
+    Country,
+    CreateOrderInput,
+    LoginCredentials,
+    Order,
+    OrdersResponse,
+    Partner,
+    Product,
+    ProductsResponse,
+    RegisterData,
     SearchSuggestion,
+    SessionInfo,
 } from './types';
 
 const ODOO_URL = process.env.NEXT_PUBLIC_ODOO_URL || 'http://localhost:8069';
@@ -216,7 +216,7 @@ class OdooApiClient {
     async getOrders(params?: {
         page?: number;
         limit?: number;
-        state?: 'sent' | 'sale' | 'cancel';
+        state?: 'draft' | 'sent' | 'sale' | 'done' | 'cancel' | 'pending';
     }): Promise<ApiResponse<OrdersResponse>> {
         const searchParams = new URLSearchParams();
 
@@ -247,6 +247,12 @@ class OdooApiClient {
 
     async reorder(orderId: number): Promise<ApiResponse<{ cart_id: number }>> {
         return this.request<{ cart_id: number }>(`/api/v1/orders/${orderId}/reorder`, {
+            method: 'POST',
+        });
+    }
+
+    async restoreOrder(orderId: number): Promise<ApiResponse<Order>> {
+        return this.request<Order>(`/api/v1/orders/${orderId}/restore`, {
             method: 'POST',
         });
     }

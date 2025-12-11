@@ -316,7 +316,7 @@ class EcommerceApiProducts(http.Controller):
             )
             
         except Exception as e:
-            _logger.exception('Error getting products: %s', str(e))
+            print('Error getting products: %s', str(e))
             return api_response(
                 success=False,
                 error=str(e),
@@ -377,7 +377,7 @@ class EcommerceApiProducts(http.Controller):
             )
             
         except Exception as e:
-            _logger.exception('Error getting product: %s', str(e))
+            print('Error getting product: %s', str(e))
             return api_response(
                 success=False,
                 error=str(e),
@@ -421,7 +421,7 @@ class EcommerceApiProducts(http.Controller):
             )
             
         except Exception as e:
-            _logger.exception('Error getting variant: %s', str(e))
+            print('Error getting variant: %s', str(e))
             return api_response(
                 success=False,
                 error=str(e),
@@ -505,7 +505,7 @@ class EcommerceApiProducts(http.Controller):
             )
             
         except Exception as e:
-            _logger.exception('Error getting categories: %s', str(e))
+            print('Error getting categories: %s', str(e))
             return api_response(
                 success=False,
                 error=str(e),
@@ -597,7 +597,7 @@ class EcommerceApiProducts(http.Controller):
             )
             
         except Exception as e:
-            _logger.exception('Error getting featured products: %s', str(e))
+            print('Error getting featured products: %s', str(e))
             return api_response(
                 success=False,
                 error=str(e),
@@ -661,7 +661,7 @@ class EcommerceApiProducts(http.Controller):
             )
             
         except Exception as e:
-            _logger.exception('Error getting search suggestions: %s', str(e))
+            print('Error getting search suggestions: %s', str(e))
             return api_response(
                 success=False,
                 error=str(e),

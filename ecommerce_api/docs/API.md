@@ -385,14 +385,38 @@ Get cart item count.
 
 #### GET `/api/v1/orders`
 
-Get order history (requires authentication).
+Get order history (requires authentication). Shows ALL orders including incomplete (draft) ones.
 
 **Query Parameters:**
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `page` | int | Page number |
 | `limit` | int | Items per page |
-| `state` | string | Filter by state |
+| `state` | string | Filter by state: `draft`, `sent`, `sale`, `done`, `cancel`, `pending` |
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "orders": [
+            {
+                "id": 123,
+                "name": "S00123",
+                "state": "draft",
+                "state_label": "Quotation",
+                "is_draft": true,
+                "is_complete": false,
+                "can_restore": true,
+                "can_reorder": false,
+                "can_cancel": true,
+                "total": 109.98
+            }
+        ],
+        "pagination": {...}
+    }
+}
+```
 
 ---
 
@@ -430,7 +454,33 @@ Create order from cart.
 
 #### POST `/api/v1/orders/<int:order_id>/cancel`
 
-Cancel an order (requires authentication).
+Cancel an order (requires authentication). Only draft and sent orders can be cancelled.
+
+---
+
+#### POST `/api/v1/orders/<int:order_id>/restore`
+
+Restore a draft (incomplete) order as the current cart. This allows users to continue with an order they didn't complete.
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "id": 123,
+        "name": "S00123",
+        "lines": [...],
+        "total": 109.98,
+        "item_count": 3
+    },
+    "message": "Order S00123 restored to cart"
+}
+```
+
+**Notes:**
+- Only draft orders can be restored
+- For completed orders, use the reorder endpoint instead
+- Restoring an order replaces the current cart
 
 ---
 

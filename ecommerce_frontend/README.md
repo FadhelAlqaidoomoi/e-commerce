@@ -22,8 +22,7 @@ A modern Next.js 16 e-commerce frontend connected to Odoo 18 backend.
 
 ## Prerequisites
 
-- Node.js 18+ 
-- npm or pnpm
+- Bun 1.0+ (or Node.js 18+)
 - Odoo 18 instance with the `ecommerce_api` module installed
 
 ## Getting Started
@@ -31,7 +30,7 @@ A modern Next.js 16 e-commerce frontend connected to Odoo 18 backend.
 1. **Install dependencies**
 
 ```bash
-npm install
+bun install
 ```
 
 2. **Configure environment variables**
@@ -52,7 +51,7 @@ NEXT_PUBLIC_ODOO_DB=your_database_name
 3. **Run the development server**
 
 ```bash
-npm run dev
+bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
@@ -85,10 +84,10 @@ src/
 
 ## Available Scripts
 
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm run start` - Start production server
-- `npm run lint` - Run ESLint
+- `bun dev` - Start development server
+- `bun run build` - Build for production
+- `bun start` - Start production server
+- `bun lint` - Run ESLint
 
 ## Backend Setup
 

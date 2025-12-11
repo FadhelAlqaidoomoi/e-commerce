@@ -1,12 +1,11 @@
 "use client";
 
-import { Minus, Plus, ShoppingBag, Trash2 } from "lucide-react";
+import { ArrowRight, Minus, Plus, Shield, ShoppingBag, Sparkles, Trash2, Truck } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect } from "react";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCartStore } from "@/lib/store";
@@ -21,34 +20,37 @@ export default function CartPage() {
 
   if (isLoading && !cart) {
     return (
-      <div className="container py-8">
-        <h1 className="text-3xl font-bold tracking-tight mb-8">Shopping Cart</h1>
-        <div className="grid lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-4">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <Card key={i}>
-                <CardContent className="p-4">
+      <div className="min-h-screen">
+        <div className="container py-12">
+          <div className="flex items-center gap-3 mb-8">
+            <div className="w-10 h-10 rounded-xl gradient-bg flex items-center justify-center">
+              <ShoppingBag className="w-5 h-5 text-white" />
+            </div>
+            <Skeleton className="h-8 w-48" />
+          </div>
+          <div className="grid lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2 space-y-4">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="p-6 rounded-2xl bg-card border">
                   <div className="flex gap-4">
-                    <Skeleton className="w-24 h-24 rounded-md" />
-                    <div className="flex-1 space-y-2">
+                    <Skeleton className="w-28 h-28 rounded-xl" />
+                    <div className="flex-1 space-y-3">
                       <Skeleton className="h-5 w-3/4" />
                       <Skeleton className="h-4 w-1/4" />
-                      <Skeleton className="h-8 w-32" />
+                      <Skeleton className="h-10 w-32" />
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-          <div>
-            <Card>
-              <CardContent className="p-6 space-y-4">
+                </div>
+              ))}
+            </div>
+            <div>
+              <div className="p-6 rounded-2xl bg-card border space-y-4">
                 <Skeleton className="h-6 w-1/2" />
                 <Skeleton className="h-4 w-full" />
                 <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-10 w-full" />
-              </CardContent>
-            </Card>
+                <Skeleton className="h-12 w-full rounded-xl" />
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -57,43 +59,73 @@ export default function CartPage() {
 
   if (!cart || cart.lines.length === 0) {
     return (
-      <div className="container py-8">
-        <h1 className="text-3xl font-bold tracking-tight mb-8">Shopping Cart</h1>
-        <div className="text-center py-12">
-          <ShoppingBag className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
-          <h2 className="text-xl font-semibold mb-2">Your cart is empty</h2>
-          <p className="text-muted-foreground mb-6">
-            Looks like you haven&apos;t added anything to your cart yet.
-          </p>
-          <Button asChild>
-            <Link href="/shop">Continue Shopping</Link>
-          </Button>
+      <div className="min-h-screen relative overflow-hidden">
+        {/* Background */}
+        <div className="absolute inset-0">
+          <div className="absolute top-20 left-10 w-72 h-72 bg-primary/10 rounded-full blur-3xl animate-blob" />
+          <div className="absolute bottom-20 right-10 w-96 h-96 bg-pink-500/10 rounded-full blur-3xl animate-blob" style={{ animationDelay: "2s" }} />
+        </div>
+
+        <div className="container relative z-10 py-16">
+          <div className="max-w-lg mx-auto text-center">
+            <div className="w-32 h-32 mx-auto rounded-full gradient-bg-subtle flex items-center justify-center mb-8">
+              <ShoppingBag className="w-16 h-16 text-primary" />
+            </div>
+            <h1 className="text-3xl font-bold mb-4">Your Cart is Empty</h1>
+            <p className="text-muted-foreground mb-8">
+              Looks like you haven&apos;t added anything to your cart yet.
+              Start exploring our amazing products!
+            </p>
+            <Link href="/shop">
+              <Button size="lg" className="rounded-full gradient-bg gap-2 btn-shine">
+                Start Shopping
+                <ArrowRight className="w-5 h-5" />
+              </Button>
+            </Link>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="container py-8">
-      <h1 className="text-3xl font-bold tracking-tight mb-8">Shopping Cart</h1>
+    <div className="min-h-screen">
+      {/* Header */}
+      <section className="relative py-12 overflow-hidden">
+        <div className="absolute inset-0 gradient-bg opacity-5" />
+        <div className="container relative z-10">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-xl gradient-bg flex items-center justify-center">
+              <ShoppingBag className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold">Shopping Cart</h1>
+              <p className="text-muted-foreground">{cart.lines.length} items in your cart</p>
+            </div>
+          </div>
+        </div>
+      </section>
 
-      <div className="grid lg:grid-cols-3 gap-8">
-        {/* Cart Items */}
-        <div className="lg:col-span-2 space-y-4">
-          {cart.lines.map((line) => (
-            <Card key={line.id}>
-              <CardContent className="p-4">
-                <div className="flex gap-4">
+      <div className="container pb-16">
+        <div className="grid lg:grid-cols-3 gap-8">
+          {/* Cart Items */}
+          <div className="lg:col-span-2 space-y-4">
+            {cart.lines.map((line, index) => (
+              <div
+                key={line.id}
+                className={`p-6 rounded-2xl bg-card border hover:shadow-lg transition-all duration-300 animate-fade-in-up stagger-${index + 1}`}
+              >
+                <div className="flex gap-6">
                   {/* Product Image */}
-                  <Link href={`/shop/${line.product_id}`} className="shrink-0">
-                    <div className="relative w-24 h-24 rounded-md overflow-hidden bg-muted">
+                  <Link href={`/shop/${line.product_id}`} className="shrink-0 group">
+                    <div className="relative w-28 h-28 rounded-xl overflow-hidden bg-secondary">
                       <Image
                         src={getImageUrl(line.image)}
                         alt={line.product_name}
                         fill
                         unoptimized={isLocalImage(getImageUrl(line.image))}
-                        className="object-cover"
-                        sizes="96px"
+                        className="object-cover group-hover:scale-110 transition-transform duration-500"
+                        sizes="112px"
                       />
                     </div>
                   </Link>
@@ -102,7 +134,7 @@ export default function CartPage() {
                   <div className="flex-1 min-w-0">
                     <Link
                       href={`/shop/${line.product_id}`}
-                      className="font-semibold hover:text-primary transition-colors line-clamp-2"
+                      className="font-semibold text-lg hover:text-primary transition-colors line-clamp-2"
                     >
                       {line.product_name}
                     </Link>
@@ -114,31 +146,33 @@ export default function CartPage() {
                       </p>
                     )}
 
-                    <p className="font-semibold mt-2">
+                    <p className="font-bold text-lg gradient-text mt-2">
                       {formatCurrency(line.price_unit, cart.currency)}
                     </p>
 
                     {/* Quantity Controls */}
-                    <div className="flex items-center gap-2 mt-3">
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => updateQuantity(line.id, line.quantity - 1)}
-                        disabled={line.quantity <= 1 || isLoading}
-                      >
-                        <Minus className="h-3 w-3" />
-                      </Button>
-                      <span className="w-8 text-center text-sm">{line.quantity}</span>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => updateQuantity(line.id, line.quantity + 1)}
-                        disabled={isLoading}
-                      >
-                        <Plus className="h-3 w-3" />
-                      </Button>
+                    <div className="flex items-center gap-3 mt-4">
+                      <div className="flex items-center rounded-xl border overflow-hidden">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-10 w-10 rounded-none hover:bg-primary/10"
+                          onClick={() => updateQuantity(line.id, line.quantity - 1)}
+                          disabled={line.quantity <= 1 || isLoading}
+                        >
+                          <Minus className="h-4 w-4" />
+                        </Button>
+                        <span className="w-12 text-center font-semibold">{line.quantity}</span>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-10 w-10 rounded-none hover:bg-primary/10"
+                          onClick={() => updateQuantity(line.id, line.quantity + 1)}
+                          disabled={isLoading}
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
 
@@ -147,52 +181,77 @@ export default function CartPage() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                      className="h-10 w-10 rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                       onClick={() => removeItem(line.id)}
                       disabled={isLoading}
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="h-5 w-5" />
                     </Button>
-                    <p className="font-semibold">
+                    <p className="text-xl font-bold">
                       {formatCurrency(line.price_subtotal, cart.currency)}
                     </p>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+              </div>
+            ))}
+          </div>
 
-        {/* Order Summary */}
-        <div>
-          <Card className="sticky top-24">
-            <CardHeader>
-              <CardTitle>Order Summary</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Subtotal</span>
-                <span>{formatCurrency(cart.subtotal, cart.currency)}</span>
+          {/* Order Summary */}
+          <div className="lg:sticky lg:top-28 lg:h-fit">
+            <div className="rounded-2xl border bg-card overflow-hidden">
+              <div className="p-6 gradient-bg text-white">
+                <h2 className="text-xl font-bold flex items-center gap-2">
+                  <Sparkles className="w-5 h-5" />
+                  Order Summary
+                </h2>
               </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Tax</span>
-                <span>{formatCurrency(cart.tax_total, cart.currency)}</span>
+              <div className="p-6 space-y-4">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Subtotal</span>
+                  <span className="font-medium">{formatCurrency(cart.subtotal, cart.currency)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Tax</span>
+                  <span className="font-medium">{formatCurrency(cart.tax_total, cart.currency)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Shipping</span>
+                  <span className="font-medium text-green-500">Free</span>
+                </div>
+                <Separator />
+                <div className="flex justify-between text-xl font-bold">
+                  <span>Total</span>
+                  <span className="gradient-text">{formatCurrency(cart.total, cart.currency)}</span>
+                </div>
+
+                <div className="space-y-3 pt-4">
+                  <Link href="/checkout" className="block">
+                    <Button className="w-full h-12 rounded-xl gradient-bg text-base btn-shine" size="lg">
+                      Checkout
+                      <ArrowRight className="ml-2 w-5 h-5" />
+                    </Button>
+                  </Link>
+                  <Link href="/shop" className="block">
+                    <Button variant="outline" className="w-full h-12 rounded-xl" size="lg">
+                      Continue Shopping
+                    </Button>
+                  </Link>
+                </div>
+
+                {/* Trust Badges */}
+                <div className="pt-6 space-y-3">
+                  <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                    <Shield className="w-5 h-5 text-green-500" />
+                    <span>Secure checkout with SSL encryption</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                    <Truck className="w-5 h-5 text-primary" />
+                    <span>Free shipping on orders over $50</span>
+                  </div>
+                </div>
               </div>
-              <Separator />
-              <div className="flex justify-between font-semibold text-lg">
-                <span>Total</span>
-                <span>{formatCurrency(cart.total, cart.currency)}</span>
-              </div>
-            </CardContent>
-            <CardFooter className="flex flex-col gap-2">
-              <Button asChild className="w-full" size="lg">
-                <Link href="/checkout">Proceed to Checkout</Link>
-              </Button>
-              <Button asChild variant="outline" className="w-full">
-                <Link href="/shop">Continue Shopping</Link>
-              </Button>
-            </CardFooter>
-          </Card>
+            </div>
+          </div>
         </div>
       </div>
     </div>

@@ -1,43 +1,53 @@
 "use client";
 
-import Link from "next/link";
-import { useState } from "react";
-import {
-  ShoppingCart,
-  User,
-  Search,
-  Menu,
-  X,
-  LogOut,
-  Package,
-  Settings,
-} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
 } from "@/components/ui/dialog";
-import { useAuthStore, useCartStore, useUIStore } from "@/lib/store";
+import { Input } from "@/components/ui/input";
+import { useAuthStore, useCartStore } from "@/lib/store";
+import {
+    ChevronDown,
+    Heart,
+    LogOut,
+    Package,
+    Search,
+    ShoppingCart,
+    Sparkles
+} from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 export function Header() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
 
   const { isAuthenticated, user, logout } = useAuthStore();
   const cartCount = useCartStore((state) => state.cartCount);
+
+  // Handle scroll effect
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 20);
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
       router.push(`/shop?search=${encodeURIComponent(searchQuery)}`);
       setIsSearchOpen(false);
+      setSearchQuery("");
     }
   };
 
@@ -47,75 +57,122 @@ export function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-16 items-center justify-between">
+    <header
+      className={`sticky top-0 z-50 w-full transition-all duration-500 ${
+        isScrolled
+          ? "bg-background/80 backdrop-blur-xl shadow-lg shadow-black/5 border-b border-border/50"
+          : "bg-transparent"
+      }`}
+    >
+      {/* Top Banner */}
+      <div className="hidden md:block gradient-bg text-white text-center py-2 text-sm">
+        <div className="container flex items-center justify-center gap-2">
+          <Sparkles className="w-4 h-4" />
+          <span>Free shipping on orders over $50 • Use code WELCOME20 for 20% off</span>
+          <Sparkles className="w-4 h-4" />
+        </div>
+      </div>
+
+      <div className="container flex h-20 items-center justify-between">
         {/* Logo */}
-        <Link href="/" className="flex items-center space-x-2">
-          <span className="text-xl font-bold">Store</span>
+        <Link href="/" className="flex items-center space-x-2 group">
+          <div className="relative">
+            <div className="w-10 h-10 rounded-xl gradient-bg flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+              <span className="text-white font-bold text-xl">S</span>
+            </div>
+            <div className="absolute -inset-1 rounded-xl gradient-bg opacity-0 group-hover:opacity-30 blur transition-opacity duration-300" />
+          </div>
+          <span className="text-2xl font-bold gradient-text hidden sm:block">Store</span>
         </Link>
 
         {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center space-x-6">
+        <nav className="hidden lg:flex items-center space-x-1">
           <Link
             href="/shop"
-            className="text-sm font-medium transition-colors hover:text-primary"
+            className="relative px-4 py-2 text-sm font-medium transition-colors hover:text-primary animated-underline"
           >
             Shop
           </Link>
           <Link
             href="/shop?order=newest"
-            className="text-sm font-medium transition-colors hover:text-primary"
+            className="relative px-4 py-2 text-sm font-medium transition-colors hover:text-primary animated-underline"
           >
             New Arrivals
           </Link>
           <Link
             href="/shop?type=sale"
-            className="text-sm font-medium transition-colors hover:text-primary"
+            className="relative px-4 py-2 text-sm font-medium transition-colors hover:text-primary animated-underline flex items-center gap-1"
           >
             Sale
+            <span className="px-1.5 py-0.5 text-xs font-bold bg-red-500 text-white rounded-full">Hot</span>
           </Link>
         </nav>
 
         {/* Search Bar - Desktop */}
         <form
           onSubmit={handleSearch}
-          className="hidden md:flex flex-1 max-w-sm mx-6"
+          className="hidden md:flex flex-1 max-w-md mx-6"
         >
-          <div className="relative w-full">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <div
+            className={`relative w-full transition-all duration-300 ${
+              isSearchFocused ? "scale-105" : ""
+            }`}
+          >
+            <div
+              className={`absolute inset-0 rounded-full gradient-bg opacity-0 blur transition-opacity duration-300 ${
+                isSearchFocused ? "opacity-20" : ""
+              }`}
+            />
+            <Search
+              className={`absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 transition-colors duration-300 ${
+                isSearchFocused ? "text-primary" : "text-muted-foreground"
+              }`}
+            />
             <Input
               type="search"
-              placeholder="Search products..."
-              className="pl-10"
+              placeholder="Search for products..."
+              className="pl-11 pr-4 h-12 rounded-full border-2 border-transparent bg-secondary/50 focus:border-primary/50 focus:bg-background transition-all duration-300"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              onFocus={() => setIsSearchFocused(true)}
+              onBlur={() => setIsSearchFocused(false)}
             />
           </div>
         </form>
 
         {/* Actions */}
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-2">
           {/* Mobile Search */}
           <Button
             variant="ghost"
             size="icon"
-            className="md:hidden"
+            className="md:hidden rounded-full hover:bg-primary/10 hover:text-primary"
             onClick={() => setIsSearchOpen(true)}
           >
             <Search className="h-5 w-5" />
           </Button>
 
+          {/* Wishlist */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="hidden sm:flex rounded-full hover:bg-primary/10 hover:text-primary relative"
+          >
+            <Heart className="h-5 w-5" />
+          </Button>
+
           {/* Cart */}
           <Link href="/cart">
-            <Button variant="ghost" size="icon" className="relative">
-              <ShoppingCart className="h-5 w-5" />
+            <Button
+              variant="ghost"
+              size="icon"
+              className="relative rounded-full hover:bg-primary/10 hover:text-primary group"
+            >
+              <ShoppingCart className="h-5 w-5 group-hover:scale-110 transition-transform" />
               {cartCount > 0 && (
-                <Badge
-                  variant="destructive"
-                  className="absolute -right-1 -top-1 h-5 w-5 rounded-full p-0 text-xs flex items-center justify-center"
-                >
+                <span className="absolute -right-1 -top-1 h-5 w-5 rounded-full gradient-bg text-white text-xs flex items-center justify-center font-bold animate-scale-in">
                   {cartCount > 99 ? "99+" : cartCount}
-                </Badge>
+                </span>
               )}
             </Button>
           </Link>
@@ -124,24 +181,37 @@ export function Header() {
           {isAuthenticated ? (
             <div className="hidden md:flex items-center space-x-2">
               <Link href="/account">
-                <Button variant="ghost" size="sm">
-                  <User className="h-4 w-4 mr-2" />
-                  {user?.name || "Account"}
+                <Button
+                  variant="ghost"
+                  className="rounded-full hover:bg-primary/10 hover:text-primary gap-2"
+                >
+                  <div className="w-8 h-8 rounded-full gradient-bg flex items-center justify-center text-white text-sm font-bold">
+                    {user?.name?.charAt(0) || "U"}
+                  </div>
+                  <span className="hidden lg:block">{user?.name || "Account"}</span>
+                  <ChevronDown className="h-4 w-4" />
                 </Button>
               </Link>
-              <Button variant="ghost" size="icon" onClick={handleLogout}>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleLogout}
+                className="rounded-full hover:bg-destructive/10 hover:text-destructive"
+              >
                 <LogOut className="h-4 w-4" />
               </Button>
             </div>
           ) : (
             <div className="hidden md:flex items-center space-x-2">
               <Link href="/auth/login">
-                <Button variant="ghost" size="sm">
+                <Button variant="ghost" className="rounded-full hover:bg-primary/10 hover:text-primary">
                   Sign In
                 </Button>
               </Link>
               <Link href="/auth/register">
-                <Button size="sm">Register</Button>
+                <Button className="rounded-full gradient-bg hover:opacity-90 btn-shine">
+                  Get Started
+                </Button>
               </Link>
             </div>
           )}
@@ -150,121 +220,174 @@ export function Header() {
           <Button
             variant="ghost"
             size="icon"
-            className="md:hidden"
+            className="lg:hidden rounded-full hover:bg-primary/10"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           >
-            {isMobileMenuOpen ? (
-              <X className="h-5 w-5" />
-            ) : (
-              <Menu className="h-5 w-5" />
-            )}
+            <div className="relative w-5 h-5">
+              <span
+                className={`absolute left-0 w-5 h-0.5 bg-current transition-all duration-300 ${
+                  isMobileMenuOpen ? "top-2 rotate-45" : "top-1"
+                }`}
+              />
+              <span
+                className={`absolute left-0 top-2 w-5 h-0.5 bg-current transition-all duration-300 ${
+                  isMobileMenuOpen ? "opacity-0" : "opacity-100"
+                }`}
+              />
+              <span
+                className={`absolute left-0 w-5 h-0.5 bg-current transition-all duration-300 ${
+                  isMobileMenuOpen ? "top-2 -rotate-45" : "top-3"
+                }`}
+              />
+            </div>
           </Button>
         </div>
       </div>
 
       {/* Mobile Menu */}
-      {isMobileMenuOpen && (
-        <div className="md:hidden border-t bg-background">
-          <nav className="container py-4 space-y-4">
+      <div
+        className={`lg:hidden overflow-hidden transition-all duration-500 ease-out ${
+          isMobileMenuOpen ? "max-h-[500px] opacity-100" : "max-h-0 opacity-0"
+        }`}
+      >
+        <div className="container py-6 space-y-6 border-t bg-background/95 backdrop-blur-xl">
+          <nav className="space-y-2">
             <Link
               href="/shop"
-              className="block text-sm font-medium"
+              className="flex items-center gap-3 p-3 rounded-xl hover:bg-primary/10 transition-colors"
               onClick={() => setIsMobileMenuOpen(false)}
             >
-              Shop
+              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                <ShoppingCart className="h-5 w-5 text-primary" />
+              </div>
+              <span className="font-medium">Shop All</span>
             </Link>
             <Link
               href="/shop?order=newest"
-              className="block text-sm font-medium"
+              className="flex items-center gap-3 p-3 rounded-xl hover:bg-primary/10 transition-colors"
               onClick={() => setIsMobileMenuOpen(false)}
             >
-              New Arrivals
+              <div className="w-10 h-10 rounded-lg bg-cyan-500/10 flex items-center justify-center">
+                <Sparkles className="h-5 w-5 text-cyan-500" />
+              </div>
+              <span className="font-medium">New Arrivals</span>
             </Link>
             <Link
               href="/shop?type=sale"
-              className="block text-sm font-medium"
+              className="flex items-center gap-3 p-3 rounded-xl hover:bg-primary/10 transition-colors"
               onClick={() => setIsMobileMenuOpen(false)}
             >
-              Sale
+              <div className="w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center">
+                <Heart className="h-5 w-5 text-red-500" />
+              </div>
+              <span className="font-medium">Sale</span>
+              <span className="ml-auto px-2 py-0.5 text-xs font-bold bg-red-500 text-white rounded-full">
+                Up to 50% off
+              </span>
             </Link>
-
-            <div className="pt-4 border-t">
-              {isAuthenticated ? (
-                <>
-                  <Link
-                    href="/account"
-                    className="flex items-center space-x-2 py-2"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    <User className="h-4 w-4" />
-                    <span>My Account</span>
-                  </Link>
-                  <Link
-                    href="/account/orders"
-                    className="flex items-center space-x-2 py-2"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    <Package className="h-4 w-4" />
-                    <span>My Orders</span>
-                  </Link>
-                  <button
-                    onClick={() => {
-                      handleLogout();
-                      setIsMobileMenuOpen(false);
-                    }}
-                    className="flex items-center space-x-2 py-2 text-destructive"
-                  >
-                    <LogOut className="h-4 w-4" />
-                    <span>Sign Out</span>
-                  </button>
-                </>
-              ) : (
-                <div className="space-y-2">
-                  <Link href="/auth/login" className="block">
-                    <Button
-                      variant="outline"
-                      className="w-full"
-                      onClick={() => setIsMobileMenuOpen(false)}
-                    >
-                      Sign In
-                    </Button>
-                  </Link>
-                  <Link href="/auth/register" className="block">
-                    <Button
-                      className="w-full"
-                      onClick={() => setIsMobileMenuOpen(false)}
-                    >
-                      Register
-                    </Button>
-                  </Link>
-                </div>
-              )}
-            </div>
           </nav>
+
+          <div className="h-px bg-border" />
+
+          {isAuthenticated ? (
+            <div className="space-y-2">
+              <Link
+                href="/account"
+                className="flex items-center gap-3 p-3 rounded-xl hover:bg-primary/10 transition-colors"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                <div className="w-10 h-10 rounded-lg gradient-bg flex items-center justify-center text-white font-bold">
+                  {user?.name?.charAt(0) || "U"}
+                </div>
+                <div>
+                  <p className="font-medium">{user?.name || "My Account"}</p>
+                  <p className="text-sm text-muted-foreground">{user?.email}</p>
+                </div>
+              </Link>
+              <Link
+                href="/account/orders"
+                className="flex items-center gap-3 p-3 rounded-xl hover:bg-primary/10 transition-colors"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <Package className="h-5 w-5 text-primary" />
+                </div>
+                <span className="font-medium">My Orders</span>
+              </Link>
+              <button
+                onClick={() => {
+                  handleLogout();
+                  setIsMobileMenuOpen(false);
+                }}
+                className="flex items-center gap-3 p-3 rounded-xl hover:bg-destructive/10 transition-colors w-full text-destructive"
+              >
+                <div className="w-10 h-10 rounded-lg bg-destructive/10 flex items-center justify-center">
+                  <LogOut className="h-5 w-5" />
+                </div>
+                <span className="font-medium">Sign Out</span>
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-4">
+              <Link href="/auth/login" onClick={() => setIsMobileMenuOpen(false)}>
+                <Button variant="outline" className="w-full rounded-xl h-12">
+                  Sign In
+                </Button>
+              </Link>
+              <Link href="/auth/register" onClick={() => setIsMobileMenuOpen(false)}>
+                <Button className="w-full rounded-xl h-12 gradient-bg">
+                  Get Started
+                </Button>
+              </Link>
+            </div>
+          )}
         </div>
-      )}
+      </div>
 
       {/* Mobile Search Dialog */}
       <Dialog open={isSearchOpen} onOpenChange={setIsSearchOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Search Products</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Search className="w-5 h-5 text-primary" />
+              Search Products
+            </DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleSearch}>
+          <form onSubmit={handleSearch} className="space-y-4">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 type="search"
-                placeholder="Search products..."
-                className="pl-10"
+                placeholder="What are you looking for?"
+                className="pl-4 pr-12 h-14 text-lg rounded-xl"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 autoFocus
               />
+              <Button
+                type="submit"
+                size="icon"
+                className="absolute right-2 top-2 h-10 w-10 rounded-lg gradient-bg"
+              >
+                <Search className="h-4 w-4" />
+              </Button>
             </div>
-            <Button type="submit" className="w-full mt-4">
-              Search
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <span className="text-sm text-muted-foreground">Popular:</span>
+              {["Electronics", "Fashion", "Home", "Sports"].map((term) => (
+                <button
+                  key={term}
+                  type="button"
+                  onClick={() => {
+                    setSearchQuery(term);
+                    router.push(`/shop?search=${term}`);
+                    setIsSearchOpen(false);
+                  }}
+                  className="px-3 py-1 text-sm rounded-full bg-secondary hover:bg-primary/10 hover:text-primary transition-colors"
+                >
+                  {term}
+                </button>
+              ))}
+            </div>
           </form>
         </DialogContent>
       </Dialog>

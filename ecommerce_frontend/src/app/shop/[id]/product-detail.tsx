@@ -23,7 +23,7 @@ export function ProductDetail({ product }: ProductDetailProps) {
   );
   const [mainImage, setMainImage] = useState(getImageUrl(product.image_large || product.image));
 
-  const { addItem, isLoading } = useCartStore();
+  const { addToCart, isLoading } = useCartStore();
 
   const currentPrice = selectedVariant
     ? product.price + selectedVariant.price_extra
@@ -39,8 +39,7 @@ export function ProductDetail({ product }: ProductDetailProps) {
   };
 
   const handleAddToCart = async () => {
-    const productId = selectedVariant?.id || product.id;
-    await addItem(productId, quantity);
+    await addToCart(product.id, quantity, selectedVariant?.id);
   };
 
   const handleVariantChange = (variant: ProductVariant) => {

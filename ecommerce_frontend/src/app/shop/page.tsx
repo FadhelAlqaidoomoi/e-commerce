@@ -20,18 +20,22 @@ interface ShopPageProps {
 
 async function getProducts(searchParams: Awaited<ShopPageProps["searchParams"]>) {
   const api = new OdooApiClient();
-  
+
   try {
-    const response = await api.getProducts({
+    // Build params object, only including defined values
+    const params: Parameters<typeof api.getProducts>[0] = {
       page: searchParams.page ? parseInt(searchParams.page) : 1,
       limit: 12,
-      category: searchParams.category ? parseInt(searchParams.category) : undefined,
-      search: searchParams.search,
-      order: searchParams.order as "name_asc" | "name_desc" | "price_asc" | "price_desc" | "newest",
-      min_price: searchParams.min_price ? parseFloat(searchParams.min_price) : undefined,
-      max_price: searchParams.max_price ? parseFloat(searchParams.max_price) : undefined,
-      in_stock: searchParams.in_stock === "true" ? true : undefined,
-    });
+    };
+
+    if (searchParams.category) params.category = parseInt(searchParams.category);
+    if (searchParams.search) params.search = searchParams.search;
+    if (searchParams.order) params.order = searchParams.order as "name_asc" | "name_desc" | "price_asc" | "price_desc" | "newest";
+    if (searchParams.min_price) params.min_price = parseFloat(searchParams.min_price);
+    if (searchParams.max_price) params.max_price = parseFloat(searchParams.max_price);
+    if (searchParams.in_stock === "true") params.in_stock = true;
+
+    const response = await api.getProducts(params);
     return response.data;
   } catch (error) {
     console.error("Failed to fetch products:", error);
@@ -101,11 +105,11 @@ export default async function ShopPage({ searchParams }: ShopPageProps) {
                   <h2 className="font-bold text-lg">Filters</h2>
                 </div>
                 <Suspense fallback={<div className="h-96 skeleton rounded-xl" />}>
-                  <ProductFilters 
-                    categories={categories} 
-                    currentCategory={params.category}
-                    minPrice={params.min_price}
-                    maxPrice={params.max_price}
+                  <ProductFilters
+                    categories={categories}
+                    currentCategory={params.category || ""}
+                    minPrice={params.min_price || ""}
+                    maxPrice={params.max_price || ""}
                     inStock={params.in_stock === "true"}
                   />
                 </Suspense>
@@ -124,7 +128,7 @@ export default async function ShopPage({ searchParams }: ShopPageProps) {
                   <span className="font-bold">{pagination?.total || 0}</span> products
                 </p>
               </div>
-              <ProductSort currentOrder={params.order} />
+              <ProductSort currentOrder={params.order || ""} />
             </div>
 
             {/* Products */}

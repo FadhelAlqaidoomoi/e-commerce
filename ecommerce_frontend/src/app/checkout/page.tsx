@@ -32,7 +32,7 @@ export default function CheckoutPage() {
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<string>("");
   const [useNewAddress, setUseNewAddress] = useState(false);
-  const [newAddress, setNewAddress] = useState<AddressInput>({
+  const [newAddress, setNewAddress] = useState({
     name: "",
     street: "",
     street2: "",
@@ -40,7 +40,7 @@ export default function CheckoutPage() {
     zip: "",
     phone: "",
     country_id: 0,
-    state_id: undefined,
+    state_id: 0,
   });
   const [notes, setNotes] = useState("");
 
@@ -56,13 +56,15 @@ export default function CheckoutPage() {
     }
 
     // Fetch saved addresses
-    if (partner?.addresses) {
-      setAddresses(partner.addresses);
-      if (partner.addresses.length > 0) {
-        setSelectedAddressId(partner.addresses[0].id.toString());
-      } else {
-        setUseNewAddress(true);
+    const partnerAddresses = partner?.addresses;
+    if (partnerAddresses && partnerAddresses.length > 0) {
+      setAddresses(partnerAddresses);
+      const firstAddress = partnerAddresses[0];
+      if (firstAddress) {
+        setSelectedAddressId(firstAddress.id.toString());
       }
+    } else {
+      setUseNewAddress(true);
     }
   }, [isAuthenticated, cart, partner, router]);
 
@@ -85,11 +87,29 @@ export default function CheckoutPage() {
         shippingAddressId = parseInt(selectedAddressId);
       }
 
-      // Create the order
+      // Get the address details for the order
+      const selectedAddress = useNewAddress
+        ? newAddress
+        : addresses.find(a => a.id === parseInt(selectedAddressId));
+
+      if (!selectedAddress) {
+        throw new Error("Please select or create a shipping address");
+      }
+
+      // Create the order with the address data
       const orderResponse = await odooApi.createOrder({
-        shipping_address_id: shippingAddressId,
-        billing_address_id: shippingAddressId, // Same as shipping for now
-        notes: notes || undefined,
+        shipping_address: {
+          name: selectedAddress.name,
+          street: selectedAddress.street,
+          street2: 'street2' in selectedAddress ? selectedAddress.street2 : "",
+          city: selectedAddress.city,
+          zip: 'zip' in selectedAddress ? selectedAddress.zip || "" : "",
+          phone: 'phone' in selectedAddress ? selectedAddress.phone || "" : "",
+          country_id: 'country_id' in selectedAddress ? selectedAddress.country_id : (selectedAddress.country?.id || 0),
+          email: user?.email || partner?.email || "",
+        },
+        use_same_address: true,
+        ...(notes ? { note: notes } : {}),
       });
 
       if (!orderResponse.success || !orderResponse.data) {
@@ -337,18 +357,18 @@ export default function CheckoutPage() {
 
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Subtotal</span>
-                  <span>{formatCurrency(cart.amount_untaxed, cart.currency)}</span>
+                  <span>{formatCurrency(cart.subtotal, cart.currency)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Tax</span>
-                  <span>{formatCurrency(cart.amount_tax, cart.currency)}</span>
+                  <span>{formatCurrency(cart.tax_total, cart.currency)}</span>
                 </div>
 
                 <Separator />
 
                 <div className="flex justify-between font-semibold text-lg">
                   <span>Total</span>
-                  <span>{formatCurrency(cart.amount_total, cart.currency)}</span>
+                  <span>{formatCurrency(cart.total, cart.currency)}</span>
                 </div>
               </CardContent>
               <CardFooter>

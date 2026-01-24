@@ -122,6 +122,7 @@ export interface Product {
     image_large?: string | null;
     additional_images?: { id: number; url: string; name: string }[];
     is_published: boolean;
+    is_new?: boolean;
     in_stock: boolean;
     qty_available?: number;
     categories: ProductCategory[];

@@ -74,7 +74,12 @@ export const useAuthStore = create<AuthState>()(
 
             register: async ({ name, email, password, phone }) => {
                 set({ isLoading: true });
-                const response = await odooApi.register({ name, email, password, phone });
+                const response = await odooApi.register({
+                    name,
+                    email,
+                    password,
+                    ...(phone ? { phone } : {}),
+                });
 
                 if (response.success && response.data) {
                     set({

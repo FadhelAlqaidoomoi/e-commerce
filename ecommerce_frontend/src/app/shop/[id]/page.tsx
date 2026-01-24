@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { notFound } from "next/navigation";
 import { OdooApiClient } from "@/lib/api";
 import { ProductDetail } from "./product-detail";
@@ -8,7 +9,8 @@ interface ProductPageProps {
   }>;
 }
 
-async function getProduct(id: number) {
+// React.cache() deduplicates this call when used in both page and generateMetadata
+const getProduct = cache(async (id: number) => {
   const api = new OdooApiClient();
   try {
     const response = await api.getProduct(id, true);
@@ -17,7 +19,7 @@ async function getProduct(id: number) {
     console.error("Failed to fetch product:", error);
     return null;
   }
-}
+});
 
 export default async function ProductPage({ params }: ProductPageProps) {
   const { id } = await params;

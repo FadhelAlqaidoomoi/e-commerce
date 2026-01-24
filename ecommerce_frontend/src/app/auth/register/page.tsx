@@ -56,7 +56,7 @@ export default function RegisterPage() {
         name: formData.name,
         email: formData.email,
         password: formData.password,
-        phone: formData.phone || undefined,
+        ...(formData.phone ? { phone: formData.phone } : {}),
       });
       router.push(redirect);
     } catch (err) {

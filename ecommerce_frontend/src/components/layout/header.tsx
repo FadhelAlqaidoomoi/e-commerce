@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 export function Header() {
   const router = useRouter();
@@ -30,31 +30,42 @@ export function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
 
-  const { isAuthenticated, user, logout } = useAuthStore();
-  const cartCount = useCartStore((state) => state.cartCount);
+  // Use individual selectors to prevent re-renders when unrelated auth state changes
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const user = useAuthStore((s) => s.user);
+  const logout = useAuthStore((s) => s.logout);
+  const cartCount = useCartStore((s) => s.cartCount);
 
-  // Handle scroll effect
+  // Optimized scroll handler with requestAnimationFrame to reduce layout thrashing
+  const rafId = useRef<number>(0);
   useEffect(() => {
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 20);
+      if (rafId.current) return; // Skip if a frame is already scheduled
+      rafId.current = requestAnimationFrame(() => {
+        setIsScrolled(window.scrollY > 20);
+        rafId.current = 0;
+      });
     };
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      if (rafId.current) cancelAnimationFrame(rafId.current);
+    };
   }, []);
 
-  const handleSearch = (e: React.FormEvent) => {
+  const handleSearch = useCallback((e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
       router.push(`/shop?search=${encodeURIComponent(searchQuery)}`);
       setIsSearchOpen(false);
       setSearchQuery("");
     }
-  };
+  }, [searchQuery, router]);
 
-  const handleLogout = async () => {
+  const handleLogout = useCallback(async () => {
     await logout();
     router.push("/");
-  };
+  }, [logout, router]);
 
   return (
     <header

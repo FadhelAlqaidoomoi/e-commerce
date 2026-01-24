@@ -1,3 +1,5 @@
+type NextFetchRequestConfig = { revalidate?: number | false; tags?: string[] };
+
 import type {
     Address,
     AddressInput,
@@ -32,9 +34,10 @@ class OdooApiClient {
 
     private async request<T>(
         endpoint: string,
-        options: RequestInit = {}
+        options: RequestInit & { next?: NextFetchRequestConfig } = {}
     ): Promise<ApiResponse<T>> {
         const url = `${this.baseUrl}${endpoint}`;
+        const isGetRequest = !options.method || options.method === 'GET';
 
         const defaultHeaders: HeadersInit = {
             'Content-Type': 'application/json',
@@ -48,6 +51,8 @@ class OdooApiClient {
                     ...options.headers,
                 },
                 credentials: 'include', // Important for session cookies
+                // Add Next.js caching for GET requests (revalidate every 60s)
+                ...(isGetRequest && !options.next ? { next: { revalidate: 60 } } : {}),
             });
 
             const data = await response.json();

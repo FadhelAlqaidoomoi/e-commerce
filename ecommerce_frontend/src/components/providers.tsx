@@ -4,14 +4,12 @@ import { useEffect } from "react";
 import { useAuthStore, useCartStore } from "@/lib/store";
 
 export function Providers({ children }: { children: React.ReactNode }) {
-  const checkSession = useAuthStore((state) => state.checkSession);
-  const fetchCart = useCartStore((state) => state.fetchCart);
+  const checkSession = useAuthStore((s) => s.checkSession);
+  const fetchCart = useCartStore((s) => s.fetchCart);
 
   useEffect(() => {
-    // Check session on mount
-    checkSession();
-    // Fetch cart on mount
-    fetchCart();
+    // Fetch session and cart in parallel for faster initial load
+    Promise.all([checkSession(), fetchCart()]);
   }, [checkSession, fetchCart]);
 
   return <>{children}</>;

@@ -3,7 +3,7 @@
 import { Eye, Heart, ShoppingCart, Sparkles, Star } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { memo, useState, useCallback } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,23 +15,24 @@ interface ProductCardProps {
   product: Product;
 }
 
-export function ProductCard({ product }: ProductCardProps) {
-  const { addToCart, isLoading } = useCartStore();
-  const [isHovered, setIsHovered] = useState(false);
+export const ProductCard = memo(function ProductCard({ product }: ProductCardProps) {
+  // Use individual selectors to prevent re-renders when other cart state changes
+  const addToCart = useCartStore((s) => s.addToCart);
+  const isLoading = useCartStore((s) => s.isLoading);
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
 
-  const handleAddToCart = async (e: React.MouseEvent) => {
+  const handleAddToCart = useCallback(async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     await addToCart(product.id, 1);
-  };
+  }, [addToCart, product.id]);
 
-  const handleWishlist = (e: React.MouseEvent) => {
+  const handleWishlist = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setIsWishlisted(!isWishlisted);
-  };
+    setIsWishlisted((prev) => !prev);
+  }, []);
 
   const imageUrl = getImageUrl(product.image);
   const discountPercentage = getDiscountPercentage(product.price, product.compare_price);
@@ -42,8 +43,6 @@ export function ProductCard({ product }: ProductCardProps) {
     <Link href={`/shop/${product.id}`}>
       <div
         className="group relative h-full rounded-2xl bg-card overflow-hidden card-glow transition-all duration-500"
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
       >
         {/* Image Container */}
         <div className="relative aspect-square overflow-hidden bg-gradient-to-br from-secondary/50 to-muted">
@@ -57,18 +56,14 @@ export function ProductCard({ product }: ProductCardProps) {
             alt={product.name}
             fill
             unoptimized={isLocalImage}
-            className={`object-contain p-4 transition-all duration-700 ${
-              isHovered ? "scale-110" : "scale-100"
-            } ${imageLoaded ? "opacity-100" : "opacity-0"}`}
+            className={`object-contain p-4 transition-all duration-700 scale-100 group-hover:scale-110 ${imageLoaded ? "opacity-100" : "opacity-0"}`}
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             onLoad={() => setImageLoaded(true)}
           />
 
-          {/* Overlay on hover */}
+          {/* Overlay on hover - using CSS group-hover */}
           <div
-            className={`absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent transition-opacity duration-300 ${
-              isHovered ? "opacity-100" : "opacity-0"
-            }`}
+            className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent transition-opacity duration-300 opacity-0 group-hover:opacity-100"
           />
 
           {/* Badges */}
@@ -95,11 +90,9 @@ export function ProductCard({ product }: ProductCardProps) {
             </div>
           )}
 
-          {/* Quick Actions */}
+          {/* Quick Actions - using CSS group-hover */}
           <div
-            className={`absolute top-3 right-3 flex flex-col gap-2 transition-all duration-300 ${
-              isHovered ? "opacity-100 translate-x-0" : "opacity-0 translate-x-4"
-            }`}
+            className="absolute top-3 right-3 flex flex-col gap-2 transition-all duration-300 opacity-0 translate-x-4 group-hover:opacity-100 group-hover:translate-x-0"
           >
             <Button
               variant="secondary"
@@ -122,11 +115,9 @@ export function ProductCard({ product }: ProductCardProps) {
             </Button>
           </div>
 
-          {/* Add to Cart Button - Slides up on hover */}
+          {/* Add to Cart Button - Slides up on hover using CSS group-hover */}
           <div
-            className={`absolute bottom-0 left-0 right-0 p-4 transition-all duration-300 ${
-              isHovered ? "translate-y-0 opacity-100" : "translate-y-full opacity-0"
-            }`}
+            className="absolute bottom-0 left-0 right-0 p-4 transition-all duration-300 translate-y-full opacity-0 group-hover:translate-y-0 group-hover:opacity-100"
           >
             <Button
               className="w-full h-11 rounded-xl gradient-bg text-white font-semibold btn-shine hover:opacity-90 transition-opacity"
@@ -179,16 +170,14 @@ export function ProductCard({ product }: ProductCardProps) {
           </div>
         </div>
 
-        {/* Bottom Border Gradient on Hover */}
+        {/* Bottom Border Gradient on Hover - using CSS group-hover */}
         <div
-          className={`absolute bottom-0 left-0 right-0 h-1 gradient-bg transition-all duration-300 ${
-            isHovered ? "opacity-100" : "opacity-0"
-          }`}
+          className="absolute bottom-0 left-0 right-0 h-1 gradient-bg transition-all duration-300 opacity-0 group-hover:opacity-100"
         />
       </div>
     </Link>
   );
-}
+});
 
 export function ProductCardSkeleton() {
   return (

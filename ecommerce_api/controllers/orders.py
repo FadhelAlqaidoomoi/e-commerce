@@ -426,13 +426,20 @@ class EcommerceApiOrders(http.Controller):
                     'state_id': int(shipping_address['state_id']) if shipping_address.get('state_id') else False,
                     'ecommerce_registered': False,
                 })
-                
+
                 order.write({
                     'partner_id': guest_partner.id,
                     'partner_shipping_id': guest_partner.id,
                     'partner_invoice_id': guest_partner.id,
                     'note': note,
+                    'guest_checkout_email': email,  # Store for order linking when user registers
                 })
+
+                # Update cart token with guest email for future linking
+                CartToken = request.env['ecommerce.cart.token'].sudo()
+                token = CartToken.get_valid_token_for_order(order.id)
+                if token:
+                    token.update_guest_info(email=email, phone=shipping_address.get('phone'))
             
             # Confirm the order
             try:

@@ -1,2 +1,5 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
 access_ecommerce_api_config,ecommerce.api.config,model_ecommerce_api_config,base.group_system,1,1,1,1
+access_ecommerce_cart_token_system,ecommerce.cart.token system,model_ecommerce_cart_token,base.group_system,1,1,1,1
+access_ecommerce_cart_token_public,ecommerce.cart.token public,model_ecommerce_cart_token,base.group_public,1,0,0,0
+access_ecommerce_cart_token_portal,ecommerce.cart.token portal,model_ecommerce_cart_token,base.group_portal,1,0,0,0

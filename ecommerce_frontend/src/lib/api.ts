@@ -70,19 +70,28 @@ class OdooApiClient {
 
     // ==================== Authentication ====================
 
-    async login(credentials: LoginCredentials): Promise<ApiResponse<SessionInfo>> {
-        return this.request<SessionInfo>('/api/v1/auth/login', {
+    async login(
+        credentials: LoginCredentials & {
+            cart_token?: string;
+            cart_merge_strategy?: 'merge' | 'replace' | 'keep_current';
+        }
+    ): Promise<ApiResponse<SessionInfo & { cart_merged?: boolean; cart_merge_strategy?: string }>> {
+        return this.request('/api/v1/auth/login', {
             method: 'POST',
             body: JSON.stringify({
                 login: credentials.email,
                 password: credentials.password,
                 db: credentials.db || this.db,
+                ...(credentials.cart_token ? { cart_token: credentials.cart_token } : {}),
+                ...(credentials.cart_merge_strategy ? { cart_merge_strategy: credentials.cart_merge_strategy } : {}),
             }),
         });
     }
 
-    async register(data: RegisterData): Promise<ApiResponse<SessionInfo>> {
-        return this.request<SessionInfo>('/api/v1/auth/register', {
+    async register(
+        data: RegisterData & { cart_token?: string }
+    ): Promise<ApiResponse<SessionInfo & { linked_orders_count?: number; cart_transferred?: boolean }>> {
+        return this.request('/api/v1/auth/register', {
             method: 'POST',
             body: JSON.stringify(data),
         });
@@ -214,6 +223,29 @@ class OdooApiClient {
 
     async getCartCount(): Promise<ApiResponse<CartCount>> {
         return this.request<CartCount>('/api/v1/cart/count');
+    }
+
+    // ==================== Cart Token (Persistence) ====================
+
+    async getCartToken(): Promise<ApiResponse<{ token: string; expires_at: string; cart_id: number }>> {
+        return this.request('/api/v1/cart/token');
+    }
+
+    async restoreCartByToken(token: string): Promise<ApiResponse<Cart & { token?: string | null }>> {
+        return this.request('/api/v1/cart/restore', {
+            method: 'POST',
+            body: JSON.stringify({ token }),
+        });
+    }
+
+    async mergeGuestCart(
+        token: string,
+        strategy: 'merge' | 'replace' | 'keep_current' = 'merge'
+    ): Promise<ApiResponse<Cart>> {
+        return this.request<Cart>('/api/v1/cart/merge', {
+            method: 'POST',
+            body: JSON.stringify({ token, strategy }),
+        });
     }
 
     // ==================== Orders ====================

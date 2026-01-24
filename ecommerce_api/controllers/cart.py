@@ -2,9 +2,10 @@
 # Part of Fadhel Addons. See LICENSE file for full copyright and licensing details.
 
 import json
+import uuid
 import logging
 
-from odoo import http, _
+from odoo import http, fields, _
 from odoo.http import request
 
 from .main import api_response, cors_handler, require_auth, verify_cart_ownership, validate_quantity
@@ -568,5 +569,295 @@ class EcommerceApiCart(http.Controller):
                 success=False,
                 error=str(e),
                 message='Failed to get cart count',
+                status=500
+            )
+
+    # ==================== Cart Token Endpoints ====================
+
+    @http.route(
+        '/api/v1/cart/token',
+        type='http',
+        auth='public',
+        methods=['GET', 'OPTIONS'],
+        csrf=False
+    )
+    @cors_handler
+    def get_cart_token(self, **kwargs):
+        """
+        Get or create a cart token for the current cart.
+        Returns existing valid token if cart already has one.
+
+        Response:
+        {
+            "token": "uuid-string",
+            "expires_at": "ISO datetime",
+            "cart_id": 123
+        }
+        """
+        try:
+            order = self._get_or_create_cart()
+
+            CartToken = request.env['ecommerce.cart.token'].sudo()
+
+            # Look for existing valid token
+            token_record = CartToken.get_valid_token_for_order(order.id)
+
+            if not token_record:
+                # Generate new token
+                token_record = CartToken.generate_token(order.id)
+            else:
+                # Refresh expiry on access
+                token_record.refresh_expiry()
+
+            # Store cart in session
+            request.session['sale_order_id'] = order.id
+
+            return api_response(
+                success=True,
+                data={
+                    'token': token_record.token,
+                    'expires_at': token_record.expires_at.isoformat(),
+                    'cart_id': order.id,
+                },
+                message='Cart token retrieved'
+            )
+
+        except Exception as e:
+            print('Error getting cart token: %s', str(e))
+            return api_response(
+                success=False,
+                error=str(e),
+                message='Failed to get cart token',
+                status=500
+            )
+
+    @http.route(
+        '/api/v1/cart/restore',
+        type='http',
+        auth='public',
+        methods=['POST', 'OPTIONS'],
+        csrf=False
+    )
+    @cors_handler
+    def restore_cart_by_token(self, **kwargs):
+        """
+        Restore a cart using a token.
+
+        Expected JSON body:
+        {
+            "token": "uuid-string"
+        }
+
+        This endpoint:
+        1. Validates the token
+        2. Checks if cart still exists and is draft
+        3. Sets the cart in the current session
+        4. For authenticated users: transfers cart to their partner
+        5. Returns cart data
+        """
+        try:
+            data = json.loads(request.httprequest.data or '{}')
+            token_str = data.get('token')
+
+            if not token_str:
+                return api_response(
+                    success=False,
+                    error='Missing token',
+                    message='Cart token is required',
+                    status=400
+                )
+
+            # Validate UUID format
+            try:
+                uuid.UUID(token_str)
+            except ValueError:
+                return api_response(
+                    success=False,
+                    error='Invalid token format',
+                    message='Invalid cart token format',
+                    status=400
+                )
+
+            CartToken = request.env['ecommerce.cart.token'].sudo()
+            token_record = CartToken.find_by_token(token_str)
+
+            if not token_record:
+                return api_response(
+                    success=False,
+                    error='TOKEN_NOT_FOUND',
+                    message='Cart token not found or expired',
+                    status=404
+                )
+
+            is_valid, error_code, error_msg = token_record.validate_token()
+            if not is_valid:
+                return api_response(
+                    success=False,
+                    error=error_code,
+                    message=error_msg,
+                    status=400
+                )
+
+            order = token_record.sale_order_id
+
+            # Handle authenticated user trying to restore guest cart
+            if request.session.uid:
+                user = request.env['res.users'].sudo().browse(request.session.uid)
+                # Transfer cart to authenticated user
+                order.write({'partner_id': user.partner_id.id})
+                token_record.claim_token(user.partner_id)
+                response_token = None
+            else:
+                token_record.refresh_expiry()
+                response_token = token_record.token
+
+            # Set cart in session
+            request.session['sale_order_id'] = order.id
+
+            cart_data = self._format_cart(order)
+            cart_data['token'] = response_token
+
+            return api_response(
+                success=True,
+                data=cart_data,
+                message='Cart restored successfully'
+            )
+
+        except Exception as e:
+            print('Error restoring cart: %s', str(e))
+            return api_response(
+                success=False,
+                error=str(e),
+                message='Failed to restore cart',
+                status=500
+            )
+
+    @http.route(
+        '/api/v1/cart/merge',
+        type='http',
+        auth='public',
+        methods=['POST', 'OPTIONS'],
+        csrf=False
+    )
+    @cors_handler
+    @require_auth
+    def merge_guest_cart(self, **kwargs):
+        """
+        Merge a guest cart into the authenticated user's cart.
+
+        Expected JSON body:
+        {
+            "token": "uuid-string",
+            "strategy": "merge" | "replace" | "keep_current"
+        }
+
+        Strategies:
+        - merge: Add guest cart items to current cart (default)
+        - replace: Replace current cart with guest cart
+        - keep_current: Keep current cart, discard guest cart
+        """
+        try:
+            data = json.loads(request.httprequest.data or '{}')
+            token_str = data.get('token')
+            strategy = data.get('strategy', 'merge')
+
+            if not token_str:
+                return api_response(
+                    success=False,
+                    error='Missing token',
+                    message='Cart token is required',
+                    status=400
+                )
+
+            if strategy not in ['merge', 'replace', 'keep_current']:
+                return api_response(
+                    success=False,
+                    error='Invalid strategy',
+                    message='Strategy must be: merge, replace, or keep_current',
+                    status=400
+                )
+
+            # Validate token
+            CartToken = request.env['ecommerce.cart.token'].sudo()
+            token_record = CartToken.find_by_token(token_str)
+
+            if not token_record:
+                return api_response(
+                    success=False,
+                    error='TOKEN_NOT_FOUND',
+                    message='Guest cart not found',
+                    status=404
+                )
+
+            is_valid, error_code, error_msg = token_record.validate_token()
+            if not is_valid:
+                return api_response(
+                    success=False,
+                    error=error_code,
+                    message=error_msg,
+                    status=400
+                )
+
+            user = request.env['res.users'].sudo().browse(request.session.uid)
+            partner = user.partner_id
+            guest_cart = token_record.sale_order_id
+
+            # Get user's current cart (if any)
+            user_cart_id = request.session.get('sale_order_id')
+            user_cart = None
+            if user_cart_id:
+                user_cart = request.env['sale.order'].sudo().browse(user_cart_id)
+                if not user_cart.exists() or user_cart.state != 'draft':
+                    user_cart = None
+                elif user_cart.id == guest_cart.id:
+                    # Same cart, nothing to merge
+                    user_cart = None
+
+            if strategy == 'keep_current':
+                # Just discard guest cart
+                token_record.claim_token(partner)
+                result_cart = user_cart if user_cart else self._get_or_create_cart()
+
+            elif strategy == 'replace':
+                # Transfer guest cart to user, discard user's current cart
+                if user_cart and user_cart.id != guest_cart.id:
+                    user_cart.order_line.unlink()  # Clear current cart
+                guest_cart.write({'partner_id': partner.id})
+                token_record.claim_token(partner)
+                result_cart = guest_cart
+
+            else:  # merge
+                if not user_cart:
+                    # No current cart, just transfer
+                    guest_cart.write({'partner_id': partner.id})
+                    result_cart = guest_cart
+                else:
+                    # Merge items from guest cart to user cart
+                    for line in guest_cart.order_line:
+                        existing = user_cart.order_line.filtered(
+                            lambda l: l.product_id.id == line.product_id.id
+                        )
+                        if existing:
+                            existing[0].product_uom_qty += line.product_uom_qty
+                        else:
+                            line.copy({'order_id': user_cart.id})
+                    result_cart = user_cart
+
+                token_record.claim_token(partner)
+
+            request.session['sale_order_id'] = result_cart.id
+
+            return api_response(
+                success=True,
+                data=self._format_cart(result_cart),
+                message=f'Cart merged using {strategy} strategy'
+            )
+
+        except Exception as e:
+            print('Error merging cart: %s', str(e))
+            return api_response(
+                success=False,
+                error=str(e),
+                message='Failed to merge cart',
                 status=500
             )

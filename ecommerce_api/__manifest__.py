@@ -41,6 +41,9 @@ Cart:
 * POST /api/v1/cart/update
 * DELETE /api/v1/cart/remove
 * DELETE /api/v1/cart/clear
+* GET /api/v1/cart/token
+* POST /api/v1/cart/restore
+* POST /api/v1/cart/merge
 
 Orders:
 * GET /api/v1/orders

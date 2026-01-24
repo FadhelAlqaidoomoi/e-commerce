@@ -70,6 +70,35 @@ class EcommerceApiConfig(models.Model):
         return origins if origins else ['*']
 
 
+class SaleOrder(models.Model):
+    """
+    Extend sale.order for guest cart and order linking features.
+    """
+    _inherit = 'sale.order'
+
+    guest_checkout_email = fields.Char(
+        string='Guest Checkout Email',
+        index=True,
+        help='Email used during guest checkout (for order linking when user registers)'
+    )
+
+    is_guest_order = fields.Boolean(
+        string='Guest Order',
+        compute='_compute_is_guest_order',
+        store=True,
+        help='Order was placed by a guest (not logged in user)'
+    )
+
+    @api.depends('partner_id')
+    def _compute_is_guest_order(self):
+        public_partner = self.env.ref('base.public_partner', raise_if_not_found=False)
+        for order in self:
+            order.is_guest_order = (
+                public_partner and
+                order.partner_id.id == public_partner.id
+            )
+
+
 class ResPartner(models.Model):
     """
     Extend partner model for e-commerce API features.
@@ -81,16 +110,27 @@ class ResPartner(models.Model):
         default=False,
         help='Customer registered through e-commerce API.'
     )
-    
+
     whatsapp_number = fields.Char(
         string='WhatsApp Number',
         help='Customer WhatsApp number for notifications.'
     )
-    
+
     whatsapp_opt_in = fields.Boolean(
         string='WhatsApp Opt-in',
         default=False,
         help='Customer opted in for WhatsApp notifications.'
+    )
+
+    guest_orders_linked = fields.Boolean(
+        string='Guest Orders Linked',
+        default=False,
+        help='Past guest orders have been linked to this account'
+    )
+
+    guest_orders_linked_date = fields.Datetime(
+        string='Orders Linked Date',
+        help='Date when guest orders were linked to this account'
     )
 
     def _get_api_data(self, include_addresses=False):

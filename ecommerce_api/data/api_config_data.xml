@@ -15,12 +15,11 @@
         <!-- Cron Job: Cleanup Expired Cart Tokens (Daily) -->
         <record id="ir_cron_cleanup_expired_cart_tokens" model="ir.cron">
             <field name="name">E-commerce: Cleanup Expired Cart Tokens</field>
-            <field name="model_id" ref="model_ecommerce_cart_token"/>
+            <field name="model_id" search="[('model','=','ecommerce.cart.token')]"/>
             <field name="state">code</field>
             <field name="code">model._cron_cleanup_expired_tokens()</field>
             <field name="interval_number">1</field>
             <field name="interval_type">days</field>
-            <field name="numbercall">-1</field>
             <field name="active">True</field>
         </record>
     </data>

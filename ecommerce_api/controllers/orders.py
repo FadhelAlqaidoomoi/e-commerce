@@ -8,7 +8,7 @@ from odoo import http, _
 from odoo.http import request
 from odoo.exceptions import ValidationError, UserError
 
-from .main import api_response, cors_handler, require_auth
+from .main import api_response, cors_handler, require_auth, verify_cart_ownership, sanitize_string
 
 _logger = logging.getLogger(__name__)
 
@@ -197,6 +197,7 @@ class EcommerceApiOrders(http.Controller):
             
             print('Getting orders for partner %s (id=%s), found %s orders', partner.name, partner.id, total_count)
             
+            # SECURITY FIX: Removed debug info (partner_id, user_id exposure)
             return api_response(
                 success=True,
                 data={
@@ -209,11 +210,6 @@ class EcommerceApiOrders(http.Controller):
                         'has_next': page < total_pages,
                         'has_prev': page > 1,
                     },
-                    'debug': {
-                        'partner_id': partner.id,
-                        'partner_name': partner.name,
-                        'user_id': request.session.uid,
-                    }
                 },
                 message=f'Found {total_count} orders'
             )
@@ -339,7 +335,12 @@ class EcommerceApiOrders(http.Controller):
                     message='No active cart found',
                     status=404
                 )
-            
+
+            # SECURITY: Verify cart ownership before checkout
+            is_valid, error_response = verify_cart_ownership(order)
+            if not is_valid:
+                return error_response
+
             if not order.order_line:
                 return api_response(
                     success=False,
@@ -351,7 +352,8 @@ class EcommerceApiOrders(http.Controller):
             shipping_address = data.get('shipping_address', {})
             billing_address = data.get('billing_address', {})
             use_same_address = data.get('use_same_address', True)
-            note = data.get('note', '')
+            # SECURITY: Sanitize note to prevent XSS
+            note = sanitize_string(data.get('note', ''), max_length=1000)
             
             # Validate shipping address
             required_fields = ['name', 'street', 'city', 'country_id']

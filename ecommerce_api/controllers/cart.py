@@ -7,7 +7,7 @@ import logging
 from odoo import http, _
 from odoo.http import request
 
-from .main import api_response, cors_handler, require_auth
+from .main import api_response, cors_handler, require_auth, verify_cart_ownership, validate_quantity
 
 _logger = logging.getLogger(__name__)
 
@@ -145,7 +145,7 @@ class EcommerceApiCart(http.Controller):
                 )
             
             order = request.env['sale.order'].sudo().browse(order_id)
-            
+
             if not order.exists() or order.state != 'draft':
                 request.session['sale_order_id'] = None
                 return api_response(
@@ -153,7 +153,17 @@ class EcommerceApiCart(http.Controller):
                     data=self._format_cart(None),
                     message='Cart is empty'
                 )
-            
+
+            # SECURITY: Verify cart ownership
+            is_valid, error_response = verify_cart_ownership(order)
+            if not is_valid:
+                request.session['sale_order_id'] = None
+                return api_response(
+                    success=True,
+                    data=self._format_cart(None),
+                    message='Cart is empty'
+                )
+
             cart_data = self._format_cart(order)
             
             return api_response(
@@ -195,8 +205,7 @@ class EcommerceApiCart(http.Controller):
             
             product_id = data.get('product_id')
             variant_id = data.get('variant_id')
-            quantity = float(data.get('quantity', 1))
-            
+
             if not product_id and not variant_id:
                 return api_response(
                     success=False,
@@ -204,12 +213,14 @@ class EcommerceApiCart(http.Controller):
                     message='Product ID or variant ID is required',
                     status=400
                 )
-            
-            if quantity <= 0:
+
+            # SECURITY: Validate quantity with bounds checking
+            is_valid, quantity, error_msg = validate_quantity(data.get('quantity', 1))
+            if not is_valid:
                 return api_response(
                     success=False,
                     error='Invalid quantity',
-                    message='Quantity must be greater than 0',
+                    message=error_msg,
                     status=400
                 )
             
@@ -340,7 +351,12 @@ class EcommerceApiCart(http.Controller):
                     message='No active cart found',
                     status=404
                 )
-            
+
+            # SECURITY: Verify cart ownership
+            is_valid, error_response = verify_cart_ownership(order)
+            if not is_valid:
+                return error_response
+
             # Find the line
             line = order.order_line.filtered(lambda l: l.id == int(line_id))
             if not line:
@@ -414,7 +430,12 @@ class EcommerceApiCart(http.Controller):
                     message='No active cart found',
                     status=404
                 )
-            
+
+            # SECURITY: Verify cart ownership
+            is_valid, error_response = verify_cart_ownership(order)
+            if not is_valid:
+                return error_response
+
             # Find and remove the line
             line = order.order_line.filtered(lambda l: l.id == line_id)
             if not line:
@@ -468,9 +489,12 @@ class EcommerceApiCart(http.Controller):
             
             order = request.env['sale.order'].sudo().browse(order_id)
             if order.exists() and order.state == 'draft':
-                # Remove all lines
-                order.order_line.unlink()
-            
+                # SECURITY: Verify cart ownership before clearing
+                is_valid, error_response = verify_cart_ownership(order)
+                if is_valid:
+                    # Remove all lines
+                    order.order_line.unlink()
+
             cart_data = self._format_cart(order if order.exists() else None)
             
             return api_response(
@@ -516,7 +540,16 @@ class EcommerceApiCart(http.Controller):
                     data={'count': 0, 'total': 0},
                     message='Cart is empty'
                 )
-            
+
+            # SECURITY: Verify cart ownership
+            is_valid, error_response = verify_cart_ownership(order)
+            if not is_valid:
+                return api_response(
+                    success=True,
+                    data={'count': 0, 'total': 0},
+                    message='Cart is empty'
+                )
+
             count = sum(line.product_uom_qty for line in order.order_line if not line.is_delivery)
             
             return api_response(

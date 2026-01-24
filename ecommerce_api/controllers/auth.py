@@ -9,7 +9,10 @@ from odoo.http import request
 from odoo.exceptions import AccessDenied, UserError
 from odoo.addons.auth_signup.models.res_users import SignupError
 
-from .main import api_response, cors_handler, require_auth
+from .main import (
+    api_response, cors_handler, require_auth, rate_limit,
+    validate_email, validate_password_strength, sanitize_string
+)
 
 _logger = logging.getLogger(__name__)
 
@@ -42,6 +45,7 @@ class EcommerceApiAuth(http.Controller):
         csrf=False
     )
     @cors_handler
+    @rate_limit(max_requests=5, window_seconds=60)  # 5 attempts per minute
     def login(self, **kwargs):
         """
         Authenticate user and create session.
@@ -119,14 +123,14 @@ class EcommerceApiAuth(http.Controller):
                 message='Login successful'
             )
             
-            # Set session cookie
+            # Set session cookie with secure settings
             response.set_cookie(
                 'session_id',
                 request.session.sid,
                 httponly=True,
-                samesite='None',
+                samesite='Lax',  # Changed from 'None' - more secure default
                 secure=True,
-                max_age=60 * 60 * 24 * 7  # 7 days
+                max_age=60 * 60 * 24  # 24 hours instead of 7 days
             )
             
             return response
@@ -155,6 +159,7 @@ class EcommerceApiAuth(http.Controller):
         csrf=False
     )
     @cors_handler
+    @rate_limit(max_requests=3, window_seconds=60)  # 3 registrations per minute
     def register(self, **kwargs):
         """
         Register a new customer account.
@@ -206,6 +211,28 @@ class EcommerceApiAuth(http.Controller):
                     message='Name, email, and password are required',
                     status=400
                 )
+
+            # Validate email format
+            if not validate_email(email):
+                return api_response(
+                    success=False,
+                    error='Invalid email',
+                    message='Please provide a valid email address',
+                    status=400
+                )
+
+            # Validate password strength
+            is_valid, error_msg = validate_password_strength(password)
+            if not is_valid:
+                return api_response(
+                    success=False,
+                    error='Weak password',
+                    message=error_msg,
+                    status=400
+                )
+
+            # Sanitize name input
+            name = sanitize_string(name, max_length=100)
             
             # Check if user already exists
             existing_user = request.env['res.users'].sudo().search([
@@ -305,9 +332,9 @@ class EcommerceApiAuth(http.Controller):
                     'session_id',
                     request.session.sid,
                     httponly=True,
-                    samesite='None',
+                    samesite='Lax',
                     secure=True,
-                    max_age=60 * 60 * 24 * 7
+                    max_age=60 * 60 * 24  # 24 hours
                 )
                 
                 return response
@@ -449,6 +476,7 @@ class EcommerceApiAuth(http.Controller):
         csrf=False
     )
     @cors_handler
+    @rate_limit(max_requests=3, window_seconds=300)  # 3 attempts per 5 minutes
     def reset_password(self, **kwargs):
         """
         Request password reset email.

@@ -7,7 +7,7 @@ import logging
 from odoo import http, _
 from odoo.http import request
 
-from .main import api_response, cors_handler, require_auth
+from .main import api_response, cors_handler, require_auth, rate_limit, validate_password_strength, sanitize_string
 
 _logger = logging.getLogger(__name__)
 
@@ -558,6 +558,7 @@ class EcommerceApiUser(http.Controller):
         csrf=False
     )
     @cors_handler
+    @rate_limit(max_requests=3, window_seconds=300)  # 3 attempts per 5 minutes
     def change_password(self, **kwargs):
         """
         Change user password.
@@ -590,11 +591,13 @@ class EcommerceApiUser(http.Controller):
                     status=400
                 )
             
-            if len(new_password) < 8:
+            # SECURITY: Use strong password validation
+            is_valid, error_msg = validate_password_strength(new_password)
+            if not is_valid:
                 return api_response(
                     success=False,
                     error='Weak password',
-                    message='New password must be at least 8 characters',
+                    message=error_msg,
                     status=400
                 )
             
